@@ -37,6 +37,7 @@ Follow these steps to set up the project locally:
 2. Navigate to the project directory:
    ```bash
    cd Web-Application
+   cd web-app
    ```
 3. Install dependencies:
    ```bash
