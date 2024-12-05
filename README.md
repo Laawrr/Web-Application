@@ -47,6 +47,9 @@ Follow these steps to set up the project locally:
 4. Configure the `.env` file:
    - Copy `.env.example` to `.env`.
    - Update the database credentials and other environment variables.
+   ```bash
+   php artisan key:generate
+   ```
 
 5. Run database migrations:
    ```bash
