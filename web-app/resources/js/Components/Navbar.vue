@@ -29,8 +29,8 @@ const showLoginModal = () => {
 
                 <!-- Desktop Navigation -->
                 <div class="hidden md:flex items-center space-x-4">
-                    <Link href="/about" class="text-gray-600 hover:text-teal-500">About</Link>
-                    <Link href="/contact" class="text-gray-600 hover:text-teal-500">Contact</Link>
+                    <a href="#features" class="text-gray-600 hover:text-teal-500">About</a>
+                    <a href="#contact" class="text-gray-600 hover:text-teal-500">Contact</a>
                     <Link :href="route('register')" class="text-gray-600 hover:text-teal-500">Register</Link>
                     <button @click="showLoginModal" 
                         class="px-4 py-2 rounded-lg bg-teal-500 text-white hover:bg-teal-600 transition-colors">
