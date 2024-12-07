@@ -48,6 +48,7 @@ Follow these steps to set up the project locally:
    - Copy `.env.example` to `.env`.
    - Update the database credentials and other environment variables.
    ```bash
+   cp .env.example .env
    php artisan key:generate
    ```
 
