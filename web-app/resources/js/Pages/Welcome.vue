@@ -102,7 +102,6 @@ import { Head } from '@inertiajs/vue3';
 import Navbar from '@/Components/Navbar.vue';
 import Modal from '@/Components/Modal.vue';
 import Login from '@/Pages/Auth/Login.vue';
-import Dashboard from './components/Dashboard.vue';
 
 const showLoginModal = ref(false);
 

@@ -6,9 +6,17 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
-// Import Vuetify for Vue 3 correctly
-import { createVuetify } from 'vuetify';  // Correct way to import Vuetify 3
-import 'vuetify/styles';  // Import Vuetify styles
+// Import Vuetify for Vue 3
+import { createVuetify } from 'vuetify';
+import 'vuetify/styles'; // Vuetify styles
+import * as components from 'vuetify/components'; // Import Vuetify components
+import * as directives from 'vuetify/directives'; // Import Vuetify directives
+
+// Create Vuetify instance
+const vuetify = createVuetify({
+    components,
+    directives,
+});
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -17,17 +25,14 @@ createInertiaApp({
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.vue`,
-            import.meta.glob('./Pages/**/*.vue'),
+            import.meta.glob('./Pages/**/*.vue')
         ),
     setup({ el, App, props, plugin }) {
         const app = createApp({ render: () => h(App, props) });
 
-        // Create Vuetify instance
-        const vuetify = createVuetify();
-
         app.use(plugin);
         app.use(ZiggyVue);
-        app.use(vuetify);  // Use Vuetify 3 instance
+        app.use(vuetify); // Add Vuetify instance here
 
         app.mount(el);
     },
