@@ -15,7 +15,7 @@
   import HeaderBar from '@/components/HeaderBar.vue';
   import FooterBar from '@/components/FooterBar.vue';
   import DashboardPage from '@/components/DashboardPage.vue';
-  
+
   export default {
     components: {
       HeaderBar,
