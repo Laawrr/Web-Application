@@ -3,11 +3,17 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\LostItemController;  // Add this line
 use App\Http\Controllers\NotificationController;  // Add this line
+use App\Http\Controllers\ActivityLogController;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 
 use Inertia\Inertia;
+
+
+
+// API route to log user activity
+Route::post('/log-activity', [ActivityLogController::class, 'logUserActivity']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('notifications', [NotificationController::class, 'index']);

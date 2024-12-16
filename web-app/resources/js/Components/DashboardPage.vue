@@ -1,4 +1,4 @@
-<template emplate>
+<template>
   <div>
     <!-- Header bar -->
     <header-bar />
@@ -10,28 +10,25 @@
         <div class="search-bar">
           <input type="text" v-model="searchQuery" placeholder="Search for lost items..." @input="filterPosts" />
         </div>
-
       </section>
 
-<!-- Maps -->
+      <!-- Maps -->
       <Map />
 
       <!-- Featured posts -->
       <section class="featured-posts">
-  <br />
-  <div v-for="post in filteredPosts" :key="post.id" class="card">
-  <img v-if="post.image" :src="post.image" alt="Item Image" class="card-image clickable" @click="enlargeImage(post.image)" />
-  <p class="post-date">{{ post.dateFound }}</p>
-  <p class="post-info"><strong>Owner:</strong> {{ post.owner }}</p>
-  <p class="post-info"><strong>Facebook Link:</strong> {{ post.facebookLink }}</p>
-  <p class="post-info"><strong>Contact Number:</strong> {{ post.contactNumber }}</p>
-  <button @click="deletePost(post.id)" class="delete-btn">
-    <span class="delete-icon">&#10005;</span>
-  </button>
-</div>
-
-</section>
-
+        <br />
+        <div v-for="post in filteredPosts" :key="post.id" class="card">
+          <img v-if="post.image" :src="post.image" alt="Item Image" class="card-image clickable" @click="enlargeImage(post.image)" />
+          <p class="post-date">{{ post.dateFound }}</p>
+          <p class="post-info"><strong>Owner:</strong> {{ post.owner }}</p>
+          <p class="post-info"><strong>Facebook Link:</strong> {{ post.facebookLink }}</p>
+          <p class="post-info"><strong>Contact Number:</strong> {{ post.contactNumber }}</p>
+          <button @click="deletePost(post.id)" class="delete-btn">
+            <span class="delete-icon">&#10005;</span>
+          </button>
+        </div>
+      </section>
 
       <!-- Modal for viewing post details -->
       <ItemModal v-if="viewingPost" :isVisible="viewingPost !== null" :post="viewingPost" @close="closePost" />
@@ -39,7 +36,6 @@
       <!-- Modal for Upload Form -->
       <div v-if="showUploadForm" class="modal-overlay" @click="closeUploadForm">
         <div class="modal-content" @click.stop>
-          
           <form @submit.prevent="uploadItem" class="upload-form">
             <div class="form-group">
               <label for="itemName">Item Name</label>
@@ -51,18 +47,15 @@
             </div>
             <div class="form-group">
               <label for="owner">Owner</label>
-              <input type="text" id="owner" v-model="newItem.owner" placeholder="Enter owner's name"
-                required />
+              <input type="text" id="owner" v-model="newItem.owner" placeholder="Enter owner's name" required />
             </div>
             <div class="form-group">
               <label for="facebookLink">Facebook Link</label>
-              <input type="text" id="facebookLink" v-model="newItem.facebookLink" placeholder="Enter Facebook link"
-                required />
+              <input type="text" id="facebookLink" v-model="newItem.facebookLink" placeholder="Enter Facebook link" required />
             </div>
             <div class="form-group">
               <label for="contactNumber">Contact Number</label>
-              <input type="tel" id="contactNumber" v-model="newItem.contactNumber" placeholder="Enter contact number"
-                required />
+              <input type="tel" id="contactNumber" v-model="newItem.contactNumber" placeholder="Enter contact number" required />
             </div>
             <div class="form-group">
               <label for="itemImage">Image</label>
@@ -82,9 +75,16 @@
 
     <!-- Footer bar -->
     <footer-bar />
+
+    <!-- Activity Log -->
+    <section class="activity-log">
+      <h3>Activity Log</h3>
+      <ul>
+        <li v-for="(log, index) in activityLogs" :key="index">{{ log }}</li>
+      </ul>
+    </section>
   </div>
 </template>
-
 
 <script>
 import axios from 'axios'; // Import axios for HTTP requests
@@ -92,7 +92,6 @@ import HeaderBar from './HeaderBar.vue';
 import FooterBar from './FooterBar.vue';
 import ItemModal from './ItemModal.vue';
 import Map from "./map.vue";
-
 
 export default {
   name: 'DashboardPage',
@@ -118,8 +117,8 @@ export default {
         contactNumber: '',
         image: null
       },
-      viewingPost: null,
-      lostItems: [] // Array to hold fetched items (integrating the provided code)
+      lostItems: [], // Array to hold fetched items (integrating the provided code)
+      activityLogs: [] // Array to store activities
     };
   },
   methods: {
@@ -192,6 +191,9 @@ export default {
           // Update filteredPosts based on search query
           this.filterPosts();
 
+          // Add to activity log
+          this.activityLogs.push(`Uploaded item: ${this.newItem.name}`);
+
           // Reset new item form
           this.newItem = {
             name: '',
@@ -231,6 +233,9 @@ export default {
           } else {
             this.filteredPosts = [...this.posts];
           }
+
+          // Add to activity log
+          this.activityLogs.push(`Deleted item with ID: ${postId}`);
         })
         .catch(error => {
           console.error('Error deleting the lost item:', error.response.data);
@@ -238,31 +243,20 @@ export default {
         });
     },
 
-    // Fetch all lost items from the backend (integrated from your provided script)
+    // Fetch all lost items from the backend (integrating the provided script)
     fetchLostItems() {
-  axios.get('/lost-items')
-    .then((response) => {
-      console.log(response.data);  // Log the data to see what is returned
-      this.lostItems = response.data; // Store the fetched items
-      this.filteredPosts = this.lostItems; // Set filtered posts to all fetched items
-    })
-    .catch((error) => {
-      console.error('Error fetching lost items:', error);
-    });
-}
+      axios.get('/lost-items')
+        .then((response) => {
+          this.posts = response.data;
+          this.filteredPosts = response.data;
+        })
+        .catch(error => {
+          console.error('Error fetching lost items:', error);
+        });
+    },
   },
-
   mounted() {
-    document.addEventListener('click', this.handleOutsideClick);
-    this.fetchLostItems(); // Fetch the lost items on component mount
-  },
-
-  beforeUnmount() {
-    document.removeEventListener('click', this.handleOutsideClick);
-  },
-
-  created() {
-    this.filteredPosts = this.posts;
+    this.fetchLostItems();
   }
 };
 </script>
@@ -270,9 +264,36 @@ export default {
 
 
 
+
 <style scoped>
 /* Scoped styles for the Dashboard component */
+/* Activity Log Section */
+.activity-log {
+  margin-top: 40px;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 
+.activity-log h3 {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.activity-log ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.activity-log li {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.activity-log li:last-child {
+  border-bottom: none;
+}
 
 
 /* Dashboard header */
@@ -415,7 +436,7 @@ export default {
   /* Fixed width for box-style */
   text-align: left;
   position: relative;
-  
+
 }
 
 .card-image {
