@@ -11,7 +11,7 @@
                 <div class="flex items-center space-x-6">
                     <Link href="/" class="text-gray-600 hover:text-teal-500">Home</Link>
 
-                    <a href="/edit-profile" class="text-gray-600 hover:text-teal-500">
+                    <a href="/profile" class="text-gray-600 hover:text-teal-500">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                             class="w-6 h-6">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

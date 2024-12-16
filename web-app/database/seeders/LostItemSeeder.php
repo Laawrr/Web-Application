@@ -34,7 +34,7 @@ class LostItemSeeder extends Seeder
                 'category' => 'Jewelry',
                 'location' => 'Butuan City Mall',
                 'image_url' => 'images/lost-items/ring1.jpg',
-                'user_id' => 1 ,  // Assuming the user with ID 2 exists
+                'user_id' => 2 ,  // Assuming the user with ID 2 exists
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
@@ -46,7 +46,7 @@ class LostItemSeeder extends Seeder
                 'category' => 'Sunglasses',
                 'location' => 'Butuan City Square',
                 'image_url' => 'images/lost-items/sunglasses1.jpg',
-                'user_id' => 1,  // Assuming the user with ID 3 exists
+                'user_id' => 2,  // Assuming the user with ID 3 exists
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],

@@ -14,38 +14,36 @@ class LostItemController extends Controller
      */
     public function store(Request $request)
     {
+        // Validate other fields
         $request->validate([
             'lost_date' => 'required|date',
             'facebook_link' => 'required|url',
-            'contact_number' => 'required|string|max:255',
+            'contact_number' => 'required|string',
             'description' => 'required|string',
-            'category' => 'required|string|max:100',
-            'location' => 'required|string|max:255',
-            'image_url' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'category' => 'required|string',
+            'location' => 'required|string',
+            'image_url' => 'nullable|string',
         ]);
 
-        // Handle image upload (if exists)
-        $imagePath = null;
-        if ($request->hasFile('image_url')) {
-            $imagePath = $request->file('image_url')->store('lost_items_images', 'public');
+        // Retrieve user_id from session
+        $userId = Session::get('user_id'); // Ensure this is set when the user logs in
+
+        if ($userId) {
+            $lostItem = LostItem::create([
+                'user_id' => $userId,
+                'lost_date' => $request->lost_date,
+                'facebook_link' => $request->facebook_link,
+                'contact_number' => $request->contact_number,
+                'description' => $request->description,
+                'category' => $request->category,
+                'location' => $request->location,
+                'image_url' => $request->image_url,
+            ]);
+
+            return response()->json(['message' => 'Lost item saved successfully', 'data' => $lostItem], 201);
         }
 
-        // Create a new LostItem instance and set attributes
-        $lostItem = new LostItem();
-        $lostItem->lost_date = $request->input('lost_date');
-        $lostItem->facebook_link = $request->input('facebook_link');
-        $lostItem->contact_number = $request->input('contact_number');
-        $lostItem->description = $request->input('description');
-        $lostItem->category = $request->input('category');
-        $lostItem->location = $request->input('location');
-        $lostItem->image_url = $imagePath;
-        $lostItem->user_id = Auth::id();  // Set the user_id to the current authenticated user's ID
-        $lostItem->save();
-
-        return response()->json([
-            'message' => 'Lost item successfully uploaded',
-            'lost_item' => $lostItem,
-        ], 201);
+        return response()->json(['error' => 'User not logged in or invalid session'], 401);
     }
 
     /**
