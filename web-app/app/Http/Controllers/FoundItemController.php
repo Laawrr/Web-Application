@@ -22,6 +22,7 @@ class FoundItemController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'item_name' => 'required|string|max:255',
             'found_date' => 'required|date',
             'facebook_link' => 'required|string|max:255',
             'contact_number' => 'required|string|max:15',
@@ -53,6 +54,7 @@ class FoundItemController extends Controller
         $foundItem = FoundItem::findOrFail($id);
 
         $request->validate([
+            'item_name' => 'required|string|max:255',
             'found_date' => 'required|date',
             'facebook_link' => 'required|string|max:255',
             'contact_number' => 'required|string|max:15',

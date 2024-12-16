@@ -12,7 +12,7 @@ class FoundItem extends Model
     protected $table = 'found_items';
 
     protected $fillable = [
-        'found_date', 'facebook_link', 'contact_number', 
+        'item_name','found_date', 'facebook_link', 'contact_number', 
         'description', 'category', 'location', 'image_url', 'user_id'
     ];
 

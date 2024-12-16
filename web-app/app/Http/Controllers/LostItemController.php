@@ -16,6 +16,7 @@ class LostItemController extends Controller
     {
         // Validate other fields
         $request->validate([
+            'item_name' => 'required|string|max:255',
             'lost_date' => 'required|date',
             'facebook_link' => 'required|url',
             'contact_number' => 'required|string',
@@ -31,6 +32,7 @@ class LostItemController extends Controller
         if ($userId) {
             $lostItem = LostItem::create([
                 'user_id' => $userId,
+                'item_name' => $request->item_name,
                 'lost_date' => $request->lost_date,
                 'facebook_link' => $request->facebook_link,
                 'contact_number' => $request->contact_number,
@@ -72,6 +74,7 @@ class LostItemController extends Controller
         $lostItem = LostItem::findOrFail($id);
 
         $request->validate([
+            'item_name' => 'required|string|max:255',
             'lost_date' => 'required|date',
             'facebook_link' => 'required|url',
             'contact_number' => 'required|string|max:255',
@@ -82,6 +85,7 @@ class LostItemController extends Controller
         ]);
 
         // Update attributes
+        $lostItem->item_name = $request->input('item_name');
         $lostItem->lost_date = $request->input('lost_date');
         $lostItem->facebook_link = $request->input('facebook_link');
         $lostItem->contact_number = $request->input('contact_number');
