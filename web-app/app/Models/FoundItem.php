@@ -5,19 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class LostItem extends Model
+class FoundItem extends Model
 {
     use HasFactory;
 
-    // Optionally specify the table if it's not named 'lost_items' by convention
-    protected $table = 'lost_items';
+    protected $table = 'found_items';
 
-    // Add the fillable properties to allow mass assignment
     protected $fillable = [
-        'lost_date', 'facebook_link', 'contact_number', 
+        'found_date', 'facebook_link', 'contact_number', 
         'description', 'category', 'location', 'image_url', 'user_id'
     ];
 
+    /**
+     * Get the user that owns the found item.
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
