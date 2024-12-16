@@ -13,14 +13,13 @@ class CreateActivityLogsTable extends Migration
      */
     public function up()
     {
-        Schema::create('activity_logs', function (Blueprint $table) {
+        Schema::create('activity_log', function (Blueprint $table) {
             $table->id('log_id'); // Auto-increment primary key
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // Foreign key reference to users table
             $table->string('action'); // Action description
             $table->timestamp('action_time')->useCurrent(); // Action timestamp (default to current time)
             $table->string('ip_address', 45)->nullable(); // IP address
             $table->text('user_agent')->nullable(); // User agent
-            $table->timestamps(); // created_at, updated_at (optional but useful for tracking record creation and modification)
         });
     }
 
@@ -31,6 +30,6 @@ class CreateActivityLogsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('activity_logs');
+        Schema::dropIfExists('activity_log');
     }
 }

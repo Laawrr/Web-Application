@@ -4,13 +4,14 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\LostItemController;  // Add this line
 use App\Http\Controllers\NotificationController;  // Add this line
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\UserController;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 
 use Inertia\Inertia;
 
-
+Route::resource('users', UserController::class);
 
 // API route to log user activity
 Route::post('/log-activity', [ActivityLogController::class, 'logUserActivity']);

@@ -22,7 +22,7 @@ class ActivityLogController extends Controller
                 'user_id' => Auth::id(), // Get the current logged-in user's ID
                 'action' => $action, // The action that the user performed
                 'action_time' => now(), // Current timestamp for action time
-                'ip_address' => request()->ip(), // Get the user's IP address
+                'ip_address' => request()->getClientIp(), // More reliable for proxy IP address
                 'user_agent' => request()->header('User-Agent'), // Get the user's browser/OS
             ]);
         }

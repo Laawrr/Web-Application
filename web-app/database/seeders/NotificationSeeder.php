@@ -12,7 +12,7 @@ class NotificationSeeder extends Seeder
     public function run()
     {
         Notification::create([
-            'user_id' => 2,
+            'user_id' => 1,
             'type' => 'order_shipped',
             'notifiable_type' => 'App\Models\User',
             'notifiable_id' => 1,
@@ -20,7 +20,7 @@ class NotificationSeeder extends Seeder
         ]);
 
         Notification::create([
-            'user_id' => 2,
+            'user_id' => 1,
             'type' => 'friend_request',
             'notifiable_type' => 'App\Models\User',
             'notifiable_id' => 1,
@@ -28,7 +28,7 @@ class NotificationSeeder extends Seeder
         ]);
 
         Notification::create([
-            'user_id' => 2,
+            'user_id' => 1,
             'type' => 'post_comment',
             'notifiable_type' => 'App\Models\User',
             'notifiable_id' => 1,
