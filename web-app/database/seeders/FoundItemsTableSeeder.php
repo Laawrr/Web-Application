@@ -33,8 +33,10 @@ class FoundItemsTableSeeder extends Seeder
                 'description' => $description,
                 'category' => $category,
                 'image_url' => $faker->imageUrl,
-                'location_found' => $faker->address,
-                'date_found' => $faker->date,
+                'location' => $faker->address, // Updated column name from 'location_found' to 'location'
+                'facebook_link' => $faker->url, // New field for 'facebook_link'
+                'contact_number' => $faker->phoneNumber, // New field for 'contact_number'
+                'found_date' => $faker->date, // Updated column name from 'date_found' to 'found_date'
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
