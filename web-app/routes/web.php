@@ -1,8 +1,6 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\LostItemController;
-use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\LostItemController;  // Add this line
 use App\Http\Controllers\NotificationController;  // Add this line
