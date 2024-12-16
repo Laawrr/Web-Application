@@ -1,3 +1,4 @@
+// --------- Frontend / Inertia / Vue / Vuetify Setup ---------
 import '../css/app.css';
 import './bootstrap';
 
@@ -39,4 +40,20 @@ createInertiaApp({
     progress: {
         color: '#4B5563',
     },
+});
+
+// --------- Backend / Express Setup ---------
+const express = require('express'); 
+const lostItemsRoute = require('./routes/lostItems'); // Import your route file for lost items
+const app = express();
+
+// Middleware to parse incoming JSON requests
+app.use(express.json());
+
+// Use the routes from the lostItems.js file
+app.use('/api', lostItemsRoute); // All routes in lostItems.js will be prefixed with /api
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });

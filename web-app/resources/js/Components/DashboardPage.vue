@@ -18,25 +18,20 @@
 
       <!-- Featured posts -->
       <section class="featured-posts">
-        <br />
-        <div v-for="post in filteredPosts" :key="post.id" class="card">
-          <img v-if="post.image" :src="post.image" alt="Item Image" class="card-image clickable"
-            @click="enlargeImage(post.image)" />
-          <!-- Centered date -->
-          <p class="post-date">{{ post.dateFound }}</p>
-          <p class="post-info"><strong>Found by:</strong> {{ post.founderName }}</p>
-          <p class="post-info"><strong>Facebook Link:</strong> {{ post.facebookLink }}</p> <!-- Facebook Link -->
-          <p class="post-info"><strong>Contact Number:</strong> {{ post.contactNumber }}</p>
-          <button @click="deletePost(post.id)" class="delete-btn">
-            <span class="delete-icon">&#10005;</span>
-          </button>
-        </div>
+  <br />
+  <div v-for="post in filteredPosts" :key="post.id" class="card">
+  <img v-if="post.image" :src="post.image" alt="Item Image" class="card-image clickable" @click="enlargeImage(post.image)" />
+  <p class="post-date">{{ post.dateFound }}</p>
+  <p class="post-info"><strong>Owner:</strong> {{ post.owner }}</p>
+  <p class="post-info"><strong>Facebook Link:</strong> {{ post.facebookLink }}</p>
+  <p class="post-info"><strong>Contact Number:</strong> {{ post.contactNumber }}</p>
+  <button @click="deletePost(post.id)" class="delete-btn">
+    <span class="delete-icon">&#10005;</span>
+  </button>
+</div>
 
-        <!-- Modal for enlarged image -->
-        <div v-if="enlargedImage" class="modal-overlay" @click="closeImage">
-          <img :src="enlargedImage" alt="Enlarged Item Image" class="modal-image" />
-        </div>
-      </section>
+</section>
+
 
       <!-- Modal for viewing post details -->
       <ItemModal v-if="viewingPost" :isVisible="viewingPost !== null" :post="viewingPost" @close="closePost" />
@@ -44,19 +39,19 @@
       <!-- Modal for Upload Form -->
       <div v-if="showUploadForm" class="modal-overlay" @click="closeUploadForm">
         <div class="modal-content" @click.stop>
-          <h2>Upload New Item</h2>
+          
           <form @submit.prevent="uploadItem" class="upload-form">
             <div class="form-group">
               <label for="itemName">Item Name</label>
               <input type="text" id="itemName" v-model="newItem.name" placeholder="Enter item name" required />
             </div>
             <div class="form-group">
-              <label for="dateFound">Date Found</label>
+              <label for="dateFound">Date of loss</label>
               <input type="date" id="dateFound" v-model="newItem.dateFound" required />
             </div>
             <div class="form-group">
-              <label for="founderName">Founder's Name</label>
-              <input type="text" id="founderName" v-model="newItem.founderName" placeholder="Enter founder's name"
+              <label for="owner">Owner</label>
+              <input type="text" id="owner" v-model="newItem.owner" placeholder="Enter owner's name"
                 required />
             </div>
             <div class="form-group">
@@ -92,6 +87,7 @@
 
 
 <script>
+import axios from 'axios'; // Import axios for HTTP requests
 import HeaderBar from './HeaderBar.vue';
 import FooterBar from './FooterBar.vue';
 import ItemModal from './ItemModal.vue';
@@ -108,125 +104,168 @@ export default {
   },
   data() {
     return {
-      posts: [],
-      searchQuery: '',
-      filteredPosts: [],
+      posts: [], // Array to store all posts from the database
+      searchQuery: '', // Used for searching/filtering posts
+      filteredPosts: [], // Filtered array to show posts based on search
       showUploadForm: false,
-      enlargedImage: null,
+      viewingPost: null,
+      enlargedImage: null, // For image previews
       newItem: {
         name: '',
         dateFound: '',
-        founderName: '',
-        facebookLink: '', // Added for Facebook link
+        owner: '',
+        facebookLink: '',
         contactNumber: '',
         image: null
       },
-      viewingPost: null
+      viewingPost: null,
+      lostItems: [] // Array to hold fetched items (integrating the provided code)
     };
   },
   methods: {
+    // Enlarge image preview
     enlargeImage(imageSrc) {
       this.enlargedImage = imageSrc;
     },
+
+    // Close the enlarged image view
     closeImage() {
       this.enlargedImage = null;
     },
+
+    // View a post
     viewPost(id) {
       this.viewingPost = this.posts.find(post => post.id === id);
     },
+
+    // Close the post view
     closePost() {
       this.viewingPost = null;
     },
+
+    // Filter posts based on search query
     filterPosts() {
-      // Apply search filter
       this.filteredPosts = this.posts.filter(post =>
-        post.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        post.description.toLowerCase().includes(this.searchQuery.toLowerCase())
+        post.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        post.owner.toLowerCase().includes(this.searchQuery.toLowerCase())
       );
     },
+
+    // Handle image file upload (for local display)
     handleImageUpload(event) {
       const file = event.target.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          this.newItem.image = reader.result;
-        };
-        reader.readAsDataURL(file);
+        this.newItem.image = file; // Store the selected image file for upload
       }
     },
+
+    // Upload a new item (post the item to the server)
     uploadItem() {
-      const newPost = {
-        id: this.posts.length + 1,
-        title: this.newItem.name,
-        description: `Item found on ${this.newItem.dateFound} by ${this.newItem.founderName}`,
-        category: 'found',
-        image: this.newItem.image,
-        dateFound: this.newItem.dateFound,
-        founderName: this.newItem.founderName,
-        facebookLink: this.newItem.facebookLink,
-        contactNumber: this.newItem.contactNumber
-      };
+      const formData = new FormData();
+      formData.append('name', this.newItem.name);
+      formData.append('lost_date', this.newItem.dateFound);
+      formData.append('owner', this.newItem.owner);
+      formData.append('facebook_link', this.newItem.facebookLink);
+      formData.append('contact_number', this.newItem.contactNumber);
 
-      this.posts.push(newPost);
+      if (this.newItem.image) {
+        formData.append('itemImage', this.newItem.image);
+      }
 
-      // Update filtered posts based on the current search query
-      this.filterPosts();
+      axios.post('/lost-items', formData)
+        .then(response => {
+          alert('Lost item uploaded successfully!');
 
-      // Save posts to localStorage
-      localStorage.setItem('posts', JSON.stringify(this.posts));
+          const newPost = {
+            id: response.data.id,
+            name: this.newItem.name,
+            dateFound: this.newItem.dateFound,
+            owner: this.newItem.owner,
+            facebookLink: this.newItem.facebookLink,
+            contactNumber: this.newItem.contactNumber,
+            image: URL.createObjectURL(this.newItem.image)
+          };
 
-      // Reset form after upload
-      this.newItem.name = '';
-      this.newItem.dateFound = '';
-      this.newItem.founderName = '';
-      this.newItem.facebookLink = '';
-      this.newItem.contactNumber = '';
-      this.newItem.image = null;
-      this.showUploadForm = false;
+          // Add new item to posts
+          this.posts.push(newPost);
+
+          // Update filteredPosts based on search query
+          this.filterPosts();
+
+          // Reset new item form
+          this.newItem = {
+            name: '',
+            dateFound: '',
+            owner: '',
+            facebookLink: '',
+            contactNumber: '',
+            image: null
+          };
+        })
+        .catch(error => {
+          console.error('Error uploading the lost item:', error.response.data);
+          alert('There was an error uploading the lost item. Check the console for details.');
+        });
     },
 
+    // Close the upload form
     closeUploadForm() {
       this.showUploadForm = false;
     },
+
+    // Handle clicks outside the modal to close it
     handleOutsideClick(event) {
       const modalContent = this.$refs.modalContent;
       if (modalContent && !modalContent.contains(event.target)) {
         this.closeUploadForm();
       }
     },
+
+    // Delete a post
     deletePost(postId) {
-      // Delete the post from posts array
-      this.posts = this.posts.filter(post => post.id !== postId);
+      axios.delete(`/lost-items/${postId}`) // Make sure you have an API endpoint for this
+        .then(() => {
+          this.posts = this.posts.filter(post => post.id !== postId);
+          if (this.searchQuery) {
+            this.filterPosts();
+          } else {
+            this.filteredPosts = [...this.posts];
+          }
+        })
+        .catch(error => {
+          console.error('Error deleting the lost item:', error.response.data);
+          alert('There was an error deleting the lost item. Check the console for details.');
+        });
+    },
 
-      // Update filteredPosts only if a search filter is applied
-      if (this.searchQuery) {
-        this.filterPosts();
-      } else {
-        this.filteredPosts = [...this.posts];
-      }
-
-      // Save updated posts to localStorage
-      localStorage.setItem('posts', JSON.stringify(this.posts));
-    }
+    // Fetch all lost items from the backend (integrated from your provided script)
+    fetchLostItems() {
+  axios.get('/lost-items')
+    .then((response) => {
+      console.log(response.data);  // Log the data to see what is returned
+      this.lostItems = response.data; // Store the fetched items
+      this.filteredPosts = this.lostItems; // Set filtered posts to all fetched items
+    })
+    .catch((error) => {
+      console.error('Error fetching lost items:', error);
+    });
+}
   },
+
   mounted() {
     document.addEventListener('click', this.handleOutsideClick);
-    const savedPosts = localStorage.getItem('posts');
-    if (savedPosts) {
-      this.posts = JSON.parse(savedPosts);
-      this.filteredPosts = [...this.posts];
-    }
+    this.fetchLostItems(); // Fetch the lost items on component mount
   },
+
   beforeUnmount() {
     document.removeEventListener('click', this.handleOutsideClick);
   },
+
   created() {
     this.filteredPosts = this.posts;
   }
 };
-
 </script>
-
 
 
 
@@ -234,15 +273,7 @@ export default {
 <style scoped>
 /* Scoped styles for the Dashboard component */
 
-/* Dashboard container */
-/* Dashboard container */
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background-color: #F5F5F5;
-  /* Light gray background */
-}
+
 
 /* Dashboard header */
 /* Dashboard container */
@@ -250,7 +281,7 @@ export default {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F5F5;
+  background-color: #030202;
   /* Light gray background */
 }
 
@@ -262,7 +293,7 @@ export default {
   /* Center the content vertically */
   align-items: center;
   /* Align content horizontally */
-  background-image: url('C:\Users\angel\OneDrive\Desktop\Web\Web-Application\web-app\public\img\wall.png');
+  background-image: url('C:\Users\angel\OneDrive\Desktop\With map\Web-Application\web-app\public\img\wall.png');
   background-size: cover;
   background-position: center center;
   padding: 80px 20px;
@@ -280,7 +311,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(13, 169, 161, 0.895);
+  //background: rgba(13, 169, 161, 0.895);
   z-index: 1;
 }
 
@@ -356,6 +387,7 @@ export default {
 
 /* Featured posts section */
 .featured-posts {
+  background-image: url('C:\Users\angel\OneDrive\Desktop\With map\Web-Application\web-app\public\img\wall.png');
   padding: 2rem;
   text-align: center;
   display: flex;
@@ -383,6 +415,7 @@ export default {
   /* Fixed width for box-style */
   text-align: left;
   position: relative;
+  
 }
 
 .card-image {
