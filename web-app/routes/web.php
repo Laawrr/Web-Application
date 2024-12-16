@@ -2,9 +2,18 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\LostItemController;  // Add this line
+use App\Http\Controllers\NotificationController;  // Add this line
+use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+
 use Inertia\Inertia;
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::put('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('notifications', [NotificationController::class, 'store']);
+});
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
