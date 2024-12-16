@@ -7,6 +7,9 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
+// Import Vue Router
+import { createRouter, createWebHistory } from 'vue-router'; // Add this line
+
 // Import Vuetify for Vue 3
 import { createVuetify } from 'vuetify';
 import 'vuetify/styles'; // Vuetify styles
@@ -17,6 +20,31 @@ import * as directives from 'vuetify/directives'; // Import Vuetify directives
 const vuetify = createVuetify({
     components,
     directives,
+});
+
+// Create the router instance
+const router = createRouter({
+    history: createWebHistory(), // Use HTML5 history mode
+    routes: [
+        {
+            path: '/admin',
+            component: () => import('./Pages/Admin.vue'),
+            children: [
+                {
+                    path: 'users',
+                    component: () => import('./Components/UsersView.vue'),
+                },
+                {
+                    path: 'users-log',
+                    component: () => import('./Components/UsersLog.vue'),
+                },
+                {
+                    path: 'reported-items',
+                    component: () => import('./Components/ReportedItems.vue'),
+                },
+            ],
+        },
+    ],
 });
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -34,6 +62,7 @@ createInertiaApp({
         app.use(plugin);
         app.use(ZiggyVue);
         app.use(vuetify); // Add Vuetify instance here
+        app.use(router); // Add the router instance here
 
         app.mount(el);
     },
