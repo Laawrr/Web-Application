@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('lost_items', function (Blueprint $table) {
+        Schema::create('found_items', function (Blueprint $table) {
             $table->id();
-            $table->date('lost_date');
+            $table->date('found_date');
             $table->string('facebook_link');
             $table->string('contact_number');
             $table->text('description'); 
@@ -27,6 +27,6 @@ return new class extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('lost_items');
+        Schema::dropIfExists('found_items');
     }
 };
