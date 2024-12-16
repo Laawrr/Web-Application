@@ -2,7 +2,7 @@
     <Head title="Finder" />
     <div class="min-h-screen bg-gray-50">
         
-        <Navbar @showLogin="handleShowLogin" />
+        <Navbar :auth="$page.props.auth" @showLogin="handleShowLogin" />
         
         <!-- Hero Section -->
         <div class="relative">

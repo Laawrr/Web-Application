@@ -1,9 +1,12 @@
 <script setup>
 import { ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 
 const isOpen = ref(false);
 const emit = defineEmits(['showLogin']);
+const props = defineProps({
+    auth: Object
+});
 
 const toggleMenu = () => {
     isOpen.value = !isOpen.value;
@@ -14,6 +17,14 @@ const showLoginModal = () => {
     if (isOpen.value) {
         isOpen.value = false; // Close mobile menu if open
     }
+};
+
+const handleSignOut = () => {
+    router.post(route('logout'), {}, {
+        onSuccess: () => {
+            router.visit('/');
+        }
+    });
 };
 </script>
 
@@ -31,11 +42,20 @@ const showLoginModal = () => {
                 <div class="hidden md:flex items-center space-x-4">
                     <a href="#features" class="text-gray-600 hover:text-teal-500">About</a>
                     <a href="#contact" class="text-gray-600 hover:text-teal-500">Contact</a>
-                    <Link :href="route('register')" class="text-gray-600 hover:text-teal-500">Register</Link>
-                    <button @click="showLoginModal" 
-                        class="px-4 py-2 rounded-lg bg-teal-500 text-white hover:bg-teal-600 transition-colors">
-                        Sign In
-                    </button>
+                    <template v-if="!auth?.user">
+                        <Link :href="route('register')" class="text-gray-600 hover:text-teal-500">Register</Link>
+                        <button @click="showLoginModal" 
+                            class="px-4 py-2 rounded-lg bg-teal-500 text-white hover:bg-teal-600 transition-colors">
+                            Sign In
+                        </button>
+                    </template>
+                    <template v-else>
+                        <span class="text-gray-600">Welcome, {{ auth.user.name }}</span>
+                        <button @click="handleSignOut" 
+                            class="px-4 py-2 rounded-lg bg-teal-500 text-white hover:bg-teal-600 transition-colors">
+                            Sign Out
+                        </button>
+                    </template>
                 </div>
 
                 <!-- Mobile menu button -->
@@ -62,14 +82,23 @@ const showLoginModal = () => {
                         class="block px-3 py-2 rounded-md text-gray-600 hover:text-teal-500 hover:bg-gray-50">
                         Contact
                     </Link>
-                    <Link :href="route('register')"
-                        class="block px-3 py-2 rounded-md text-gray-600 hover:text-teal-500 hover:bg-gray-50">
-                        Register
-                    </Link>
-                    <button @click="showLoginModal"
-                        class="block w-full text-left px-3 py-2 rounded-md text-teal-500 hover:text-teal-600 hover:bg-gray-50">
-                        Sign In
-                    </button>
+                    <template v-if="!auth?.user">
+                        <Link :href="route('register')"
+                            class="block px-3 py-2 rounded-md text-gray-600 hover:text-teal-500 hover:bg-gray-50">
+                            Register
+                        </Link>
+                        <button @click="showLoginModal"
+                            class="block w-full text-left px-3 py-2 rounded-md text-teal-500 hover:text-teal-600 hover:bg-gray-50">
+                            Sign In
+                        </button>
+                    </template>
+                    <template v-else>
+                        <span class="block px-3 py-2 text-gray-600">Welcome, {{ auth.user.name }}</span>
+                        <button @click="handleSignOut"
+                            class="block w-full text-left px-3 py-2 rounded-md text-teal-500 hover:text-teal-600 hover:bg-gray-50">
+                            Sign Out
+                        </button>
+                    </template>
                 </div>
             </div>
         </div>
