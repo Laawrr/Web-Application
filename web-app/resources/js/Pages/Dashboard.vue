@@ -12,9 +12,9 @@
   
   <script>
   // Import your components
-  import HeaderBar from '@/components/HeaderBar.vue';
-  import FooterBar from '@/components/FooterBar.vue';
-  import DashboardPage from '@/components/DashboardPage.vue';
+  import HeaderBar from '../Components/HeaderBar.vue';
+  import FooterBar from '../Components/FooterBar.vue';
+  import DashboardPage from '../Components/DashboardPage.vue';
 
   export default {
     components: {

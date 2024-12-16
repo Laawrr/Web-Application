@@ -3,11 +3,25 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\LostItemController;  // Add this line
 use App\Http\Controllers\NotificationController;  // Add this line
+use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\FoundItemController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\ClaimController;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 
 use Inertia\Inertia;
+
+
+Route::resource('users', UserController::class);
+
+// API route to log user activity
+Route::post('/log-activity', [ActivityLogController::class, 'logUserActivity']);
+
+Route::post('/claims', [ClaimController::class, 'store']);
+Route::put('/claims/{id}', [ClaimController::class, 'update']);
+Route::get('/claims/{id}', [ClaimController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('notifications', [NotificationController::class, 'index']);
@@ -42,5 +56,7 @@ Route::get('/edit-profile', [ProfileController::class, 'edit'])->name('editProfi
 Route::get('/lost-items', [LostItemController::class, 'index'])->name('lost-items.index');  // For GET request
 Route::post('/lost-items', [LostItemController::class, 'store'])->name('lost-items.store');  // For POST request
 
+Route::get('/found-items', [FoundItemController::class, 'index'])->name('found-items.index');
+Route::post('/found-items', [FoundItemController::class, 'store'])->name('found-items.store');
 
 require __DIR__.'/auth.php';
