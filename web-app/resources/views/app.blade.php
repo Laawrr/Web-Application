@@ -25,8 +25,6 @@
         window.userID = "{{ route('user.id') }}";
         window.lostItemsUrl = "{{ route('lost-items.index') }}";
         window.foundItemsUrl = "{{ route('found-items.index') }}";
-
-
     </script>
     </body>
 </html>

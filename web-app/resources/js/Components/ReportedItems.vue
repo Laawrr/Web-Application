@@ -6,49 +6,23 @@
         <span>Reported Items</span>
         <v-spacer></v-spacer>
       </v-card-title>
-      <v-text-field
-        v-model="search"
-        append-icon="mdi-magnify"
-        label="Search"
-        single-line
-        hide-details
-        class="mx-4"
-        style="max-width: 300px;"
-      ></v-text-field>
+      <v-text-field v-model="search" append-icon="mdi-magnify" label="Search" single-line hide-details class="mx-4"
+        style="max-width: 300px;"></v-text-field>
       <v-divider></v-divider>
-      <v-data-table
-        :headers="headers"
-        :items="formattedItems"
-        :search="search"
-        :loading="loading"
-        :items-per-page="10"
-        class="elevation-1"
-        v-model:page="page"
-      >
+      <v-data-table :headers="headers" :items="formattedItems" :search="search" :loading="loading" :items-per-page="10"
+        class="elevation-1" v-model:page="page">
         <template v-slot:progress>
-          <v-progress-linear
-            color="#4fb9af"
-            height="2"
-            indeterminate
-          ></v-progress-linear>
+          <v-progress-linear color="#4fb9af" height="2" indeterminate></v-progress-linear>
         </template>
         <template v-slot:bottom="props">
           <div class="d-flex align-center justify-center pa-4 gap-4">
-            <v-btn
-              style="background-color: #4fb9af; color: white; text-align: center"
-              variant="flat"
-              :disabled="page === 1"
-              @click="page--"
-            >
+            <v-btn style="background-color: #4fb9af; color: white; text-align: center" variant="flat"
+              :disabled="page === 1" @click="page--">
               Previous
             </v-btn>
             <span>Page {{ page }} of {{ Math.ceil(formattedItems.length / 10) }}</span>
-            <v-btn
-              style="background-color: #4fb9af; color: white; text-align: center"
-              variant="flat"
-              :disabled="page >= Math.ceil(formattedItems.length / 10)"
-              @click="page++"
-            >
+            <v-btn style="background-color: #4fb9af; color: white; text-align: center" variant="flat"
+              :disabled="page >= Math.ceil(formattedItems.length / 10)" @click="page++">
               Next
             </v-btn>
           </div>
@@ -68,7 +42,7 @@ export default {
       search: '',
       page: 1,
       headers: [
-        { 
+        {
           text: 'Item Name',
           value: 'item_name',
           width: '25%',
@@ -76,7 +50,7 @@ export default {
           sortable: true,
           filterable: true,
         },
-        { 
+        {
           text: 'Reporter',
           value: 'user.name',
           width: '20%',
@@ -84,22 +58,15 @@ export default {
           sortable: true,
           filterable: true,
         },
-        { 
-          text: 'Status',
-          value: 'status',
-          width: '15%',
-          align: 'start',
-          sortable: true,
-        },
-        { 
+        {
           text: 'Type',
           value: 'type',
           width: '15%',
           align: 'start',
           sortable: true,
         },
-        { 
-          text: 'Date',
+        {
+          text: 'Time',
           value: 'created_at',
           width: '15%',
           align: 'start',
@@ -112,10 +79,13 @@ export default {
   },
   computed: {
     formattedItems() {
-      return this.items.map(item => ({
-        ...item,
-        type: item.type === 'lost' ? 'Lost Item' : 'Found Item',
-      }));
+      return this.items
+        .map(item => ({
+          ...item,
+          type: item.isLost !== undefined ? (item.isLost ? 'Lost Item' : 'Found Item') : (item.fromLostItems ? 'Lost Item' : 'Found Item'),
+          created_at: this.formatDate(item.created_at),
+        }))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     },
   },
   created() {
@@ -126,7 +96,10 @@ export default {
       this.loading = true;
       axios.get('/admin/reported-items')
         .then(response => {
-          this.items = [...response.data.lostItems, ...response.data.foundItems];
+          this.items = [
+            ...response.data.lostItems.map(item => ({ ...item, fromLostItems: true })),
+            ...response.data.foundItems.map(item => ({ ...item, fromLostItems: false }))
+          ];
         })
         .catch(error => {
           console.error('Error fetching reported items:', error);
@@ -134,6 +107,20 @@ export default {
         .finally(() => {
           this.loading = false;
         });
+    },
+
+    formatDate(dateString) {
+      const options = {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: true
+      };
+      const date = new Date(dateString);
+      return date.toLocaleString('en-US', options);
     },
   },
 };

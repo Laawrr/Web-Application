@@ -5,74 +5,36 @@
         <v-spacer></v-spacer>
         <span>Users Management</span>
         <v-spacer></v-spacer>
-        <v-btn
-          style="background-color: #4fb9af; color: white"
-          variant="flat"
-          class="ml-2 d-flex align-center"
-          @click="showAddDialog = true"
-        >
+        <v-btn style="background-color: #4fb9af; color: white" variant="flat" class="ml-2 d-flex align-center"
+          @click="showAddDialog = true">
           <span>Add User</span>
         </v-btn>
       </v-card-title>
-      <v-text-field
-        v-model="search"
-        append-icon="mdi-magnify"
-        label="Search"
-        single-line
-        hide-details
-        class="mx-4"
-        style="max-width: 300px;"
-      ></v-text-field>
+      <v-text-field v-model="search" append-icon="mdi-magnify" label="Search" single-line hide-details class="mx-4"
+        style="max-width: 300px;"></v-text-field>
       <v-divider></v-divider>
-      <v-data-table
-        :headers="headers"
-        :items="filteredUsers"
-        :search="search"
-        :loading="loading"
-        :items-per-page="10"
-        class="elevation-1"
-        v-model:page="page"
-      >
+      <v-data-table :headers="headers" :items="filteredUsers" :search="search" :loading="loading" :items-per-page="10"
+        class="elevation-1" v-model:page="page">
         <template v-slot:progress>
-          <v-progress-linear
-            color="#4fb9af"
-            height="2"
-            indeterminate
-          ></v-progress-linear>
+          <v-progress-linear color="#4fb9af" height="2" indeterminate></v-progress-linear>
         </template>
         <template v-slot:item.actions="{ item }">
           <div class="d-flex align-center">
-            <font-awesome-icon
-              icon="fa-solid fa-pen-to-square"
-              class="mr-5 action-icon"
-              style="color: #4fb9af; cursor: pointer;"
-              @click="editUser(item)"
-            />
-            <font-awesome-icon
-              icon="fa-solid fa-trash"
-              class="action-icon"
-              style="color: #FF5252; cursor: pointer;"
-              @click="deleteUser(item)"
-            />
+            <font-awesome-icon icon="fa-solid fa-pen-to-square" class="mr-5 action-icon"
+              style="color: #4fb9af; cursor: pointer;" @click="editUser(item)" />
+            <font-awesome-icon icon="fa-solid fa-trash" class="action-icon" style="color: #FF5252; cursor: pointer;"
+              @click="deleteUser(item)" />
           </div>
         </template>
         <template v-slot:bottom="props">
           <div class="d-flex align-center justify-center pa-4 gap-4">
-            <v-btn
-              style="background-color: #4fb9af; color: white; text-align: center"
-              variant="flat"
-              :disabled="page === 1"
-              @click="page--"
-            >
+            <v-btn style="background-color: #4fb9af; color: white; text-align: center" variant="flat"
+              :disabled="page === 1" @click="page--">
               Previous
             </v-btn>
             <span>Page {{ page }} of {{ Math.ceil(filteredUsers.length / 10) }}</span>
-            <v-btn
-              style="background-color: #4fb9af; color: white; text-align: center"
-              variant="flat"
-              :disabled="page >= Math.ceil(filteredUsers.length / 10)"
-              @click="page++"
-            >
+            <v-btn style="background-color: #4fb9af; color: white; text-align: center" variant="flat"
+              :disabled="page >= Math.ceil(filteredUsers.length / 10)" @click="page++">
               Next
             </v-btn>
           </div>
@@ -90,34 +52,20 @@
             <v-container>
               <v-row>
                 <v-col cols="12">
-                  <v-text-field
-                    label="Name"
-                    v-model="newUser.name"
-                  ></v-text-field>
+                  <v-text-field label="Name" v-model="newUser.name"></v-text-field>
                 </v-col>
                 <v-col cols="12">
-                  <v-text-field
-                    label="Email"
-                    v-model="newUser.email"
-                  ></v-text-field>
+                  <v-text-field label="Email" v-model="newUser.email"></v-text-field>
                 </v-col>
               </v-row>
             </v-container>
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn
-              color="grey"
-              variant="text"
-              @click="showAddDialog = false"
-            >
+            <v-btn color="grey" variant="text" @click="showAddDialog = false">
               Cancel
             </v-btn>
-            <v-btn
-              style="background-color: #4fb9af; color: white; text-align: center"
-              variant="flat"
-              @click="addUser"
-            >
+            <v-btn style="background-color: #4fb9af; color: white; text-align: center" variant="flat" @click="addUser">
               Save
             </v-btn>
           </v-card-actions>
@@ -132,34 +80,20 @@
             <v-container>
               <v-row>
                 <v-col cols="12">
-                  <v-text-field
-                    label="Name"
-                    v-model="editedUser.name"
-                  ></v-text-field>
+                  <v-text-field label="Name" v-model="editedUser.name"></v-text-field>
                 </v-col>
                 <v-col cols="12">
-                  <v-text-field
-                    label="Email"
-                    v-model="editedUser.email"
-                  ></v-text-field>
+                  <v-text-field label="Email" v-model="editedUser.email"></v-text-field>
                 </v-col>
               </v-row>
             </v-container>
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn
-              color="grey"
-              variant="text"
-              @click="showEditDialog = false"
-            >
+            <v-btn color="grey" variant="text" @click="showEditDialog = false">
               Cancel
             </v-btn>
-            <v-btn
-              style="background-color: #4fb9af; color: white; text-align: center"
-              variant="flat"
-              @click="saveEdit"
-            >
+            <v-btn style="background-color: #4fb9af; color: white; text-align: center" variant="flat" @click="saveEdit">
               Save
             </v-btn>
           </v-card-actions>
@@ -178,7 +112,7 @@ export default {
     return {
       search: '',
       headers: [
-        { 
+        {
           text: 'Name',
           value: 'name',
           width: '25%',
@@ -186,7 +120,7 @@ export default {
           sortable: true,
           filterable: true,
         },
-        { 
+        {
           text: 'Email',
           value: 'email',
           width: '30%',
@@ -194,21 +128,21 @@ export default {
           sortable: true,
           filterable: true,
         },
-        { 
+        {
           text: 'Role',
           value: 'role',
           width: '15%',
           align: 'start',
           sortable: true,
         },
-        { 
-          text: 'Date Created',
+        {
+          text: 'Created',
           value: 'created_at',
           width: '15%',
           align: 'start',
           sortable: true,
         },
-        { 
+        {
           text: 'Actions',
           value: 'actions',
           width: '10%',
@@ -250,7 +184,7 @@ export default {
       this.loading = true;
       axios.get('/admin/users')
         .then(response => {
-          this.users = response.data.users;
+          this.users = response.data.users.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sorting by created_at in descending order
         })
         .catch(error => {
           console.error('Error fetching users:', error);
@@ -260,11 +194,20 @@ export default {
         });
     },
 
+
     formatDate(dateString) {
-      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      const options = {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      };
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', options);
+      return date.toLocaleString('en-US', options);
     },
+
 
     addUser() {
       console.log('Add user:', this.newUser);

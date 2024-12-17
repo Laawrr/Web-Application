@@ -128,6 +128,7 @@
               </div>
             </form>
           </div>
+
         </div>
 
         <div v-if="enlargedImage" class="modal-overlay" @click="closeImage">
@@ -160,8 +161,7 @@ export default {
         facebook_link: "",
         contact_number: "",
         location: null,
-        image_file: null,
-        image_preview_url: null,
+        image_url: null,
         user_id: null,
       },
       posts: [],
@@ -169,6 +169,7 @@ export default {
       searchQuery: "",
       showUploadForm: false,
       enlargedImage: null,
+
       locationSelected: false,
       mapEnabled: false,
       isSubmitting: false,
@@ -224,9 +225,10 @@ export default {
         this.newItem.image_file = file;
 
         // Create a preview URL
+
         const reader = new FileReader();
         reader.onload = (e) => {
-          this.newItem.image_preview_url = e.target.result;
+          this.newItem.image_preview_url = e.target.result;  // Store the base64 preview URL
         };
         reader.readAsDataURL(file);
       }
@@ -242,20 +244,23 @@ export default {
         facebook_link: "",
         contact_number: "",
         location: null,
-        image_file: null,
-        image_preview_url: null,
+        image_url: null,
         user_id: this.newItem.user_id,
       };
     },
     updateLocation(location) {
       this.newItem.location = location;
-      this.locationSelected = true;
     },
-    async submitForm() {
-      if (!this.newItem.location) {
-        this.showError("Please select a location on the map first");
-        return;
+    previewImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.newItem.image_url = e.target.result;
+        };
+        reader.readAsDataURL(file);
       }
+
 
       this.isSubmitting = true;
       try {
@@ -306,18 +311,17 @@ export default {
         // Add CSRF token to form data
         formData.append('_token', token.content);
 
-        const url = this.newItem.status === "Lost" ? window.lostItemsStore : window.foundItemsStore;
-
-        const response = await axios.post(url, formData, {
+        await axios.post(url, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
-            "X-CSRF-TOKEN": token.content,
-            "X-Requested-With": "XMLHttpRequest"
+            "X-CSRF-TOKEN": document
+              .querySelector('meta[name="csrf-token"]')
+              .getAttribute("content"),
           },
-          withCredentials: true
         });
 
-        this.showSuccess("Post created successfully!");
+        alert("Item stored successfully!");
+        this.fetchPosts();
         this.closeUploadForm();
         await this.fetchPosts();
       } catch (error) {
@@ -358,6 +362,10 @@ export default {
     closeImage() {
       this.enlargedImage = null;
     },
+    closeUploadForm() {
+      this.showUploadForm = false;
+      this.resetNewItem();
+    },
     async deletePost(postId) {
       if (confirm("Are you sure you want to delete this post?")) {
         try {
@@ -375,11 +383,11 @@ export default {
 
           alert("Post deleted successfully!");
         } catch (error) {
-          console.error("Error deleting post:", error);
-          alert("Error deleting post: " + error.message);
+          console.error("Error deleting post:", error.message);
         }
       }
     },
+
     enableLocationSelection() {
       this.locationSelected = true;
       this.mapEnabled = true;
@@ -390,9 +398,16 @@ export default {
       const additionalSpacing = rowCount > 2 ? (rowCount - 2) * 20 : 0; // Add 20px for each row beyond 2
       this.containerStyle.paddingBottom = `${baseSpacing + additionalSpacing}px`;
     },
+
   },
 };
 </script>
+
+
+
+
+
+
 
 <style scoped>
 .dashboard-container {
@@ -657,51 +672,27 @@ export default {
 .form-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
   margin-top: 20px;
+  padding: 15px 0;
+  background: white;
 }
 
-.spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: #fff;
-  animation: spin 1s ease-in-out infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.submit-btn {
-  background-color: #008080;
-  color: white;
+.btn {
+  padding: 8px 16px;
   border: none;
-  padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
-  min-width: 100px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.submit-btn:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.cancel-btn {
-  background-color: #6c757d;
+.btn.primary {
+  background: #008080;
   color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-right: 10px;
+}
+
+.btn.secondary {
+  background: #9e9e9e;
+  color: white;
 }
 
 .floating-btn {

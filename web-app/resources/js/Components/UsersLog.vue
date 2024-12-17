@@ -98,6 +98,8 @@ export default {
       axios.get('/admin/users-log')
         .then(response => {
           this.logs = response.data.activityLog;
+          // Sort logs by action_time in descending order
+          this.logs.sort((a, b) => new Date(b.action_time) - new Date(a.action_time));
         })
         .catch(error => {
           console.error('Error fetching activity logs:', error);
@@ -106,8 +108,17 @@ export default {
           this.loading = false;
         });
     },
-    formatDate(date) {
-      return new Date(date).toLocaleString();
+    formatDate(dateString) {
+      const options = {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      };
+      const date = new Date(dateString);
+      return date.toLocaleString('en-US', options);
     },
   },
 };
