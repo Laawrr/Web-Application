@@ -28,7 +28,7 @@
           </div>
         </div>
       </section>
-
+      
       <!-- Details Modal -->
       <div v-if="showDetailModal" class="modal-overlay" @click="closeDetailModal">
         <div class="modal-content" @click.stop>
@@ -186,7 +186,8 @@ export default {
         facebook_link: "",
         contact_number: "",
         location: null,
-        image_url: null,
+        image_file: null,
+        image_preview_url: null,
         user_id: null,
       },
       posts: [
@@ -745,3 +746,4 @@ export default {
   }
 }
 </style>
+

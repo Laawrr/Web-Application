@@ -1,46 +1,29 @@
 <template>
-  <div class="dashboard">
-    <!-- Map container with search bar -->
-    <v-card class="map-container">
-      <v-card-title class="text-h6 font-weight-bold">LostNoMore Map</v-card-title>
-
-      <!-- Search Location Bar -->
-      <v-text-field v-model="searchQuery" label="Search for a location" outlined dense class="input-field"
-        @input="searchLocation" :loading="loadingSearch"></v-text-field>
-
-      <!-- Map element -->
-      <div id="map" class="custom-map"></div>
-    </v-card>
-
-    <!-- Modal for adding marker details -->
-    <v-dialog v-model="showModal" max-width="600px" @click:outside="closeModal">
-      <v-card class="modal-card">
-        <v-card-title class="text-h5 font-weight-bold">Add New Marker</v-card-title>
-        <v-card-text>
-          <v-form ref="form" class="d-flex flex-column gap-4">
-            <v-text-field label="Enter Title" v-model="markerTitle" outlined dense required
-              class="input-field"></v-text-field>
-
-            <v-text-field label="Enter Founder's name" v-model="markerFounder" outlined dense
-              class="input-field"></v-text-field>
-
-            <v-text-field label="Enter URL" v-model="markerUrl" outlined dense required
-              class="input-field"></v-text-field>
-
-            <v-file-input label="Upload Image" v-model="markerImage" accept="image/*" outlined dense
-              class="input-field"></v-file-input>
-
-            <v-textarea label="Enter phone number" v-model="markerAdditionalInfo" outlined dense rows="1"
-              class="input-field"></v-textarea>
-          </v-form>
-        </v-card-text>
-
-        <v-card-actions class="actions">
-          <v-btn color="grey" text @click="closeModal">Cancel</v-btn>
-          <v-btn color="primary" class="white--text" @click="addMarker">Save</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+  <div class="map-container">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <v-card-title class="text-h6 font-weight-bold mt-5">LostNoMore Map</v-card-title>
+    <v-text-field
+      v-model="searchQuery"
+      label="Search for a location"
+      outlined
+      dense
+      class="input-field"
+      @input="searchLocation"
+      :loading="loadingSearch"
+    ></v-text-field>
+    <div class="map-wrapper" :class="{ 'map-disabled': disabled }">
+      <div id="map" ref="mapRef" class="custom-map"></div>
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="loading-content">
+          <v-progress-circular
+            indeterminate
+            color="primary"
+            size="64"
+          ></v-progress-circular>
+          <span class="loading-text">Loading map...</span>
+        </div>
+      </div>
+    </div>
 
     <!-- Snackbar for showing error messages -->
     <v-snackbar v-model="snackbar.visible" :color="snackbar.color" multi-line timeout="4000">
@@ -52,247 +35,389 @@
 <script>
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import axios from 'axios';
 
 export default {
   name: "Map",
+  props: {
+    disabled: {
+      type: Boolean,
+      default: true,
+    },
+  },
   data() {
     return {
       map: null,
       searchQuery: "",
-      showModal: false,
       loadingSearch: false,
+      isLoading: true,
       snackbar: {
         visible: false,
         message: "",
         color: "error",
       },
-      markerTitle: "",
-      markerFounder: "",
-      markerUrl: "",
-      markerImage: null,
-      markerAdditionalInfo: "",
       selectedLatLng: null,
-      markers: [],
-      searchMarker: null,
+      currentMarker: null,
+      userLocationMarker: null,
+      watchId: null,
     };
   },
   mounted() {
-    this.map = L.map("map", { zoomControl: true, zoomAnimation: true });
+    this.$nextTick(() => {
+      this.initializeMap();
+    });
+  },
+  methods: {
+    initializeMap() {
+      if (this.map) {
+        this.map.remove();
+      }
 
-    if (navigator.geolocation) {
+      const mapContainer = this.$refs.mapRef;
+      if (!mapContainer) {
+        this.isLoading = false;
+        return;
+      }
+
+      this.isLoading = true;
+
+      try {
+        this.map = L.map(mapContainer, {
+          zoomControl: true,
+          zoomAnimation: true,
+          dragging: !this.disabled,
+          touchZoom: !this.disabled,
+          doubleClickZoom: !this.disabled,
+          scrollWheelZoom: !this.disabled,
+          boxZoom: !this.disabled,
+          keyboard: !this.disabled,
+        });
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "OpenStreetMap contributors",
+        }).addTo(this.map);
+
+        // Set a default view immediately
+        this.map.setView([14.5995, 120.9842], 13); // Manila coordinates
+
+        // Add click handler for marking locations
+        this.map.on("click", (e) => {
+          if (this.disabled) return;
+
+          const latlng = e.latlng;
+
+          if (this.currentMarker) {
+            this.map.removeLayer(this.currentMarker);
+          }
+
+          const pinIcon = L.divIcon({
+            html: '<i class="fas fa-map-marker-alt"></i>',
+            className: "custom-pin-marker",
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+          });
+
+          this.currentMarker = L.marker(latlng, {
+            icon: pinIcon,
+          }).addTo(this.map);
+
+          this.selectedLatLng = latlng;
+          
+          // Emit the selected location to the parent component
+          this.$emit("location-selected", {
+            lat: latlng.lat,
+            lng: latlng.lng
+          });
+          
+          // Show coordinates in a popup
+          this.currentMarker.bindPopup(
+            `<b>Selected Location</b>`
+          ).openPopup();
+        });
+
+        // Get current location
+        if ("geolocation" in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              
+              // Set map view to user location
+              this.map.setView([latitude, longitude], 15);
+
+              // Add user location marker
+              const userIcon = L.divIcon({
+                html: '<div class="user-location-dot"></div>',
+                className: "user-location-marker",
+                iconSize: [12, 12],
+              });
+
+              if (this.userLocationMarker) {
+                this.map.removeLayer(this.userLocationMarker);
+              }
+
+              this.userLocationMarker = L.marker([latitude, longitude], {
+                icon: userIcon,
+                zIndexOffset: 1000,
+              })
+                .addTo(this.map)
+                .bindPopup("Your location")
+                .openPopup();
+
+              // Watch for location updates
+              this.watchId = navigator.geolocation.watchPosition(
+                (newPosition) => {
+                  const newLat = newPosition.coords.latitude;
+                  const newLng = newPosition.coords.longitude;
+                  if (this.userLocationMarker) {
+                    this.userLocationMarker.setLatLng([newLat, newLng]);
+                  }
+                },
+                null,
+                { enableHighAccuracy: true }
+              );
+            },
+            (error) => {
+              console.error("Geolocation error:", error);
+              this.showSnackbar("Unable to get your location. Please enable location services.", "error");
+            }
+          );
+        } else {
+          this.showSnackbar("Geolocation is not supported by your browser", "error");
+        }
+
+        this.map.whenReady(() => {
+          this.isLoading = false;
+        });
+
+        setTimeout(() => {
+          this.map.invalidateSize();
+        }, 250);
+
+      } catch (error) {
+        console.error('Error initializing map:', error);
+        this.showSnackbar('Error initializing map. Please refresh the page.', 'error');
+        this.isLoading = false;
+      }
+    },
+    getCurrentLocation() {
+      if (!navigator.geolocation) {
+        this.showSnackbar("Geolocation is not supported by your browser", "error");
+        return;
+      }
+
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 5000, // Reduced timeout
+        maximumAge: 0
+      };
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          this.map.setView([latitude, longitude], 15);
+          
+          if (this.map) {
+            // Set map view to user location
+            this.map.setView([latitude, longitude], 15);
 
-          L.marker([latitude, longitude])
-            .addTo(this.map)
-            .bindPopup("You are here!")
-            .openPopup();
+            // Create user location marker
+            if (this.userLocationMarker) {
+              this.map.removeLayer(this.userLocationMarker);
+            }
+
+            const userIcon = L.divIcon({
+              html: '<div class="user-location-dot"></div>',
+              className: "user-location-marker",
+              iconSize: [12, 12],
+            });
+
+            this.userLocationMarker = L.marker([latitude, longitude], {
+              icon: userIcon,
+              zIndexOffset: 1000,
+            })
+              .addTo(this.map)
+              .bindPopup("Your location")
+              .openPopup();
+
+            // Start watching position for updates
+            if (this.watchId) {
+              navigator.geolocation.clearWatch(this.watchId);
+            }
+
+            this.watchId = navigator.geolocation.watchPosition(
+              (newPosition) => {
+                const newLat = newPosition.coords.latitude;
+                const newLng = newPosition.coords.longitude;
+                if (this.userLocationMarker) {
+                  this.userLocationMarker.setLatLng([newLat, newLng]);
+                }
+              },
+              null,
+              options
+            );
+          }
         },
         (error) => {
-          this.showSnackbar("Error getting your location: " + error.message, "error");
-        }
+          let errorMessage = "Error getting your location. ";
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage += "Please enable location services.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage += "Location information unavailable.";
+              break;
+            case error.TIMEOUT:
+              errorMessage += "Request timed out.";
+              break;
+            default:
+              errorMessage += "An unknown error occurred.";
+          }
+          console.error('Geolocation error:', error);
+          this.showSnackbar(errorMessage, "error");
+        },
+        options
       );
-    }
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(this.map);
-
-    this.map.on("click", (e) => {
-      this.updateLocation(e)
-    });
-
-    this.map.on("zoomend", this.adjustMarkerSize);
-    this.loadMarkers();
-  },
-  methods: {
+    },
     showSnackbar(message, color) {
       this.snackbar.message = message;
       this.snackbar.color = color;
       this.snackbar.visible = true;
     },
-
     searchLocation() {
       if (!this.searchQuery) return this.showSnackbar("Please enter a valid location.", "error");
 
       this.loadingSearch = true;
-      const apiUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.searchQuery)}&limit=1`;
+      const apiUrl = `https://cors-anywhere.herokuapp.com/https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        this.searchQuery
+      )}&limit=1`;
 
       fetch(apiUrl)
         .then((response) => response.json())
         .then((data) => {
-          this.loadingSearch = false;
-          if (data.length) {
+          if (data && data.length > 0) {
             const { lat, lon } = data[0];
             this.map.setView([lat, lon], 15);
-            if (this.searchMarker) this.map.removeLayer(this.searchMarker);
-            this.searchMarker = L.marker([lat, lon]).addTo(this.map).bindPopup("Location found!").openPopup();
           } else {
             this.showSnackbar("Location not found.", "error");
           }
         })
         .catch((error) => {
+          console.error("Error searching location:", error);
+          this.showSnackbar("Error searching location. Please try again.", "error");
+        })
+        .finally(() => {
           this.loadingSearch = false;
-          this.showSnackbar("Error fetching location: " + error.message, "error");
         });
     },
-
-    createMarkerIcon() {
-      const iconSize = this.getIconSizeForZoom();
-      return L.icon({
-        iconUrl: this.markerImage ? URL.createObjectURL(this.markerImage) : "default_marker.png",
-        iconSize,
-        iconAnchor: [iconSize[0] / 2, iconSize[1]],
-        popupAnchor: [0, -iconSize[1]],
-      });
-    },
-
-    getIconSizeForZoom() {
-      const zoom = this.map.getZoom();
-      return [40 * (zoom > 10 ? 1.5 : 1), 40 * (zoom > 10 ? 1.5 : 1)];
-    },
-
-    adjustMarkerSize() {
-      this.map.eachLayer((layer) => {
-        if (layer instanceof L.Marker) layer.setIcon(this.createMarkerIcon());
-      });
-    },
-
-    closeModal() {
-      this.showModal = false;
-      this.resetModalData();
-    },
-
-    resetModalData() {
-      this.markerTitle = "";
-      this.markerFounder = "";
-      this.markerUrl = "";
-      this.markerImage = null;
-      this.markerAdditionalInfo = "";
-    },
-
-    loadMarkers() {
-      const savedMarkers = localStorage.getItem("markers");
-      if (savedMarkers) {
-        this.markers = JSON.parse(savedMarkers);
-        this.markers.forEach((marker) => {
-          const markerIcon = L.icon({
-            iconUrl: marker.image || "default_marker.png", // Set marker icon
-            iconSize: this.getIconSizeForZoom(),
-            iconAnchor: [20, 40],
-            popupAnchor: [0, -40],
-          });
-
-          L.marker([marker.lat, marker.lng], { icon: markerIcon })
-            .addTo(this.map)
-            .bindPopup(`
-          <div class="marker-popup">
-            <div class="popup-header">
-              <strong class="popup-title">${marker.title}</strong>
-              <p class="popup-subtitle">Founded by: ${marker.founder}</p>
-            </div>
-            <div class="popup-body">
-              <!-- Conditionally show the image if it exists -->
-              ${marker.image ? `<img src="${marker.image}" alt="Marker Image" class="popup-image" />` : ''}
-              <p class="popup-info">${marker.additionalInfo || "No additional info"}</p>
-              <a href="${marker.url}" target="_blank" class="popup-link">More Info</a>
-            </div>
-          </div>
-        `, { maxWidth: 400 });
-        });
-      }
-    }
-    ,
-
-    openAddMarkerModal() {
-      this.showModal = true;
-    },
-
-    updateLocation(e) {
-      const selectedLatLng = e.latlng; // Get the latitude and longitude of the selected point
-      this.$emit('location-selected', selectedLatLng); // Emit the location data to the parent component
-    },
-
-  addMarker() {
-    if (!this.$refs.form.validate()) return this.showSnackbar("Fill out required fields.", "error");
-    const markerData = {
-      lat: this.selectedLatLng.lat,
-      lng: this.selectedLatLng.lng,
-      title: this.markerTitle,
-      founder: this.markerFounder,
-      url: this.markerUrl,
-      image: this.markerImage ? URL.createObjectURL(this.markerImage) : null,
-      additionalInfo: this.markerAdditionalInfo,
-    };
-
-    L.marker([markerData.lat, markerData.lng], { icon: this.createMarkerIcon() }).addTo(this.map);
-    this.markers.push(markerData);
-    localStorage.setItem("markers", JSON.stringify(this.markers));
-    this.closeModal();
   },
-},
+  beforeDestroy() {
+    if (this.watchId !== null) {
+      navigator.geolocation.clearWatch(this.watchId);
+    }
+    if (this.map) {
+      if (this.currentMarker) {
+        this.map.removeLayer(this.currentMarker);
+      }
+      if (this.userLocationMarker) {
+        this.map.removeLayer(this.userLocationMarker);
+      }
+      this.map.remove();
+    }
+  },
 };
 </script>
 
 <style>
-/* Style for the map container */
 .map-container {
-  border-radius: 8px;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
   padding: 16px;
-  background-color: #f5f5f5;
+}
+
+.map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: filter 0.3s ease;
+}
+
+.map-disabled {
+  filter: blur(3px);
+  pointer-events: none;
+  user-select: none;
 }
 
 .custom-map {
-  height: 500px;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  z-index: 1;
 }
 
-.modal-card {
-  border-radius: 12px;
-  padding: 16px;
-  background-color: #fff;
-  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 
-/* Title Styling */
-.v-card-title {
-  font-weight: bold;
-  font-size: 1.25rem;
-  color: #333;
-  margin-bottom: 20px;
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
-/* Form Fields */
+.loading-text {
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.user-location-dot {
+  width: 12px;
+  height: 12px;
+  background: #1976d2;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px #1976d2;
+  animation: pulse 2s infinite;
+}
+
+.custom-pin-marker {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-pin-marker i {
+  color: #f44336;
+  font-size: 30px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(25, 118, 210, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+  }
+}
+
 .input-field {
   margin-bottom: 16px;
-}
-
-/* Buttons Styling */
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 12px;
-}
-
-.v-btn {
-  text-transform: none;
-}
-
-.v-btn.primary {
-  background-color: #6200ea;
-  /* Purple for the 'Save' button */
-  color: #fff;
-}
-
-.v-btn.grey {
-  background-color: #f1f1f1;
-  /* Light grey for the 'Cancel' button */
-  color: #333;
-}
-
-/* Snackbar */
-.v-snackbar {
-  max-width: 400px;
-  background-color: #6200ea;
-  color: white;
 }
 </style>
