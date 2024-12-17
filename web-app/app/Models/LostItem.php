@@ -25,4 +25,10 @@ class LostItem extends Model
     {
         return $this->hasOne(Claim::class, 'lost_item_id');
     }
+    
+    public function comments()
+    {
+        return $this->morphMany(Comment::class, 'commentable');
+    }
+
 }

@@ -23,7 +23,7 @@
           <!-- Post Header -->
           <div class="flex items-center space-x-4 mb-4">
             <div>
-              <h2 class="text-xl font-semibold text-gray-800">{{ item.title }}</h2>
+              <h2 class="text-xl font-semibold text-gray-800">{{ item.item_name }}</h2>
               <p class="text-sm text-gray-500">Reported on: {{ formatDate(item.created_at) }}</p>
             </div>
           </div>
@@ -107,44 +107,38 @@ export default {
     FooterBar
   },
   setup() {
-    const lostItems = ref([]);
-    const loading = ref(true);
-    const newComment = ref(""); // For storing the comment text
+    const lostItems = ref([]); // Lost items data
+    const loading = ref(true); // Loading state
+    const newComment = ref(''); // Comment input
+    const userId = ref(null); // User ID state
 
-    // Sample output data of two lost items with comments
-    const sampleLostItems = [
-      {
-        id: 1,
-        title: 'Lost Wallet at Central Park',
-        description: 'I lost my wallet at Central Park around 3 PM. It is black with a few cards and some cash inside.',
-        image_url: 'https://grandeurstore.ph/cdn/shop/files/vanilla_5140ee5f-dd3f-4d1f-a21a-40932793339d.jpg?v=1710850069&width=823',
-        created_at: '2024-12-16T12:00:00Z',
-        comments: [
-          
-        ],
-        showCommentSection: false // Toggle visibility of the comment section
-      },
-      {
-        id: 2,
-        title: 'Lost Keys near Subway Station',
-        description: 'A set of keys was found near the subway station entrance. The keys are attached to a red keychain.',
-        image_url: 'https://a-us.storyblok.com/f/1015476/1920x1080/9874ed74da/homepage-hero-1920px-x-1080px.png/m/1280x0',
-        created_at: '2024-12-16T14:00:00Z',
-        comments: [
-          
-        ],
-        showCommentSection: false // Toggle visibility of the comment section
-      }
-    ];
-
-    // Simulate fetching lost items (using the sample data for now)
-    const fetchLostItems = async () => {
+    // Fetch user ID
+    const fetchUserId = async () => {
       try {
-        // Uncomment this line to fetch real data
-        // const response = await axios.get('http://localhost:5000/lost-items');
-        lostItems.value = sampleLostItems;  // Use the two sample lost items
+        const response = await axios.get(window.userID); // User ID URL
+        userId.value = response.data.id; // Set user ID
       } catch (error) {
-        console.error('Error fetching lost items:', error);
+        console.error('Error fetching user ID:', error.message);
+      }
+    };
+
+    // Fetch posts for lost and found items
+    const fetchPosts = async () => {
+      try {
+        // Fetch data from both endpoints simultaneously
+        const [lostResponse, foundResponse] = await Promise.all([
+          axios.get(window.lostItemsUrl), // Lost items URL
+          axios.get(window.foundItemsUrl), // Found items URL
+        ]);
+
+        // Combine and mark data (optional isFound flag for future use)
+        const lostPosts = lostResponse.data.map(post => ({ ...post, isFound: false, comments: [], showCommentSection: false }));
+        const foundPosts = foundResponse.data.map(post => ({ ...post, isFound: true, comments: [], showCommentSection: false }));
+
+        // Merge posts into a single array
+        lostItems.value = [...lostPosts, ...foundPosts];
+      } catch (error) {
+        console.error('Error fetching posts:', error.message);
       } finally {
         loading.value = false;
       }
@@ -153,39 +147,45 @@ export default {
     // Toggle the visibility of the comment section
     const toggleCommentSection = (itemId) => {
       const item = lostItems.value.find(item => item.id === itemId);
-      item.showCommentSection = !item.showCommentSection;
-    };
-
-    // Handle the comment input to hide suggestions
-    const onCommentInput = (itemId) => {
-      if (newComment.value.trim().length <= 1) {
-        const item = lostItems.value.find(item => item.id === itemId);
-        item.suggestedComments = [];
-      }
+      if (item) item.showCommentSection = !item.showCommentSection;
     };
 
     // Submit a new comment
     const submitComment = (itemId) => {
-      if (newComment.value.trim() !== "") {
+      const commentText = newComment.value.trim();
+      if (commentText !== '') {
         const item = lostItems.value.find(item => item.id === itemId);
-        item.comments.push({ id: Date.now(), text: newComment.value }); // Add new comment with a unique id
-        newComment.value = ""; // Clear the input field
+        if (item) {
+          item.comments.push({ id: Date.now(), text: commentText });
+          newComment.value = ''; // Clear input
+        }
       }
     };
 
+    // Format date helper
     const formatDate = (dateString) => {
       const date = new Date(dateString);
       return date.toLocaleDateString();
     };
 
-    onMounted(() => {
-      fetchLostItems();
+    // On mount, fetch user ID and posts
+    onMounted(async () => {
+      await fetchUserId();
+      await fetchPosts();
     });
 
-    return { lostItems, loading, formatDate, newComment, submitComment, toggleCommentSection, onCommentInput };
+    return {
+      lostItems,
+      loading,
+      formatDate,
+      newComment,
+      submitComment,
+      toggleCommentSection
+    };
   }
 };
 </script>
+
 
 <style scoped>
 /* Add a custom spinner style */

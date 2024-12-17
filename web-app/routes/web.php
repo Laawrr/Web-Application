@@ -10,6 +10,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\MarkerController;
 use App\Http\Controllers\SessionController;
+use App\Http\Controllers\CommentController;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
