@@ -13,6 +13,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// Existing routes...
 
 Route::resource('users', UserController::class);
 
@@ -46,6 +47,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Add the newsfeed route here
+    Route::get('/newsfeed', function () {
+        return Inertia::render('NewsFeed'); // 'NewsFeed' is the Vue component name
+    })->middleware('auth'); // Add auth middleware if needed
 });
 
 // Admin routes
@@ -56,7 +62,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/admin/users-log', [AdminController::class, 'usersLog'])->name('admin.usersLog');
     Route::get('/admin/reported-items', [AdminController::class, 'reportedItems'])->name('admin.reportedItems');
 });
-
 
 // Lost Items routes
 Route::middleware(['auth'])->group(function () {
