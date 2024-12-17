@@ -24,16 +24,14 @@
           </div>
         </template>
 
-        <template v-slot:headers="{ columns }">
-          <tr>
-            <th
-              v-for="column in columns"
-              :key="column.key"
-              class="text-subtitle-1 font-weight-bold"
-            >
-              {{ column.title }}
-            </th>
-          </tr>
+        <template v-slot:header.user.name>
+          <span class="font-weight-black">User</span>
+        </template>
+        <template v-slot:header.action>
+          <span class="font-weight-black">Action</span>
+        </template>
+        <template v-slot:header.action_time>
+          <span class="font-weight-black">Time</span>
         </template>
 
         <template v-slot:item="{ item }">
@@ -146,22 +144,32 @@ export default {
   border-radius: 0 0 4px 4px;
 }
 
+:deep(.v-data-table-header) {
+  background-color: #f5f5f5 !important;
+}
+
 :deep(.v-data-table-header th) {
-  color: rgba(0, 0, 0, 0.87) !important;
-  font-weight: 600 !important;
+  color: black !important;
+  font-weight: 700 !important;
   font-size: 14px !important;
-  background: white !important;
   text-transform: none !important;
   letter-spacing: 0 !important;
-  border-bottom: thin solid rgba(0, 0, 0, 0.12) !important;
+  padding: 12px 16px !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.12) !important;
 }
 
 :deep(.v-data-table tbody td) {
   color: rgba(0, 0, 0, 0.87) !important;
+  padding: 8px 16px !important;
 }
 
 .text-h5 {
   color: rgba(0, 0, 0, 0.87);
   font-weight: 500;
+}
+
+.font-weight-black {
+  font-weight: 900 !important;
+  color: black !important;
 }
 </style>
