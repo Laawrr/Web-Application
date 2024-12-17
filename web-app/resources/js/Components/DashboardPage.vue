@@ -97,19 +97,24 @@
                   </div>
                 </div>
                 <div class="form-column">
-                  <div class="form-group">
-                    <div class="map-wrapper">
-                      <div class="map-overlay" v-if="!locationSelected">
-                        <button class="add-location-btn" @click="enableLocationSelection">
-                          <i class="fas fa-map-marker-alt"></i>
-                          Add Location (Click to Enable Map)
-                        </button>
+                  <div class="map-wrapper">
+                    <div class="map-area">
+                      <div class="map-container" :class="{ enabled: mapEnabled }">
+                        <div class="map-blur-overlay" :class="{ enabled: mapEnabled }"></div>
+                        <Map ref="mapComponent" @location-selected="updateLocation" :disabled="!locationSelected" />
                       </div>
-                      <div v-if="locationSelected" class="location-status">
-                        <span v-if="newItem.location">Location selected ✓</span>
-                        <span v-else>Click on the map to place a pin</span>
+                      <div class="map-controls">
+                        <div class="map-overlay" v-if="!locationSelected">
+                          <button class="add-location-btn" @click="enableLocationSelection">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Add Location (Click to Enable Map)
+                          </button>
+                        </div>
+                        <div v-if="locationSelected" class="location-status">
+                          <span v-if="newItem.location">Location selected ✓</span>
+                          <span v-else>Click on the map to place a pin</span>
+                        </div>
                       </div>
-                      <Map ref="mapComponent" @location-selected="updateLocation" :disabled="!locationSelected" />
                     </div>
                   </div>
                 </div>
@@ -165,6 +170,7 @@ export default {
       showUploadForm: false,
       enlargedImage: null,
       locationSelected: false,
+      mapEnabled: false,
       isSubmitting: false,
       containerStyle: {
         minHeight: '100vh',
@@ -344,6 +350,7 @@ export default {
       this.showUploadForm = false;
       this.resetNewItem();
       this.locationSelected = false;
+      this.mapEnabled = false;
     },
     enlargeImage(imageUrl) {
       this.enlargedImage = imageUrl;
@@ -375,6 +382,7 @@ export default {
     },
     enableLocationSelection() {
       this.locationSelected = true;
+      this.mapEnabled = true;
     },
     updateSpacing(posts) {
       const baseSpacing = 100; // Base padding
@@ -546,38 +554,92 @@ export default {
 }
 
 .map-wrapper {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
   position: relative;
   width: 100%;
   height: 750px;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 20px;
 }
 
-.location-status {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.9);
-  padding: 5px 15px;
-  border-radius: 20px;
-  z-index: 99;
-  font-size: 14px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.map-area {
+  position: relative;
+  height: 100%;
+  width: 100%;
 }
 
-.map-overlay {
+.map-container {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  width: 100%;
+  height: 100%;
+}
+
+.map-blur-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.5);
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.map-blur-overlay.enabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.map-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  pointer-events: none;
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 100;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.map-overlay {
+  pointer-events: auto;
+}
+
+.add-location-btn {
+  background-color: #4fb9af;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.add-location-btn:hover {
+  background-color: #45a399;
+}
+
+.location-status {
+  background: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  pointer-events: auto;
 }
 
 .image-preview {
@@ -676,15 +738,5 @@ export default {
   max-width: 90%;
   max-height: 90vh;
   object-fit: contain;
-}
-
-.add-location-btn {
-  background: #008080;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
 }
 </style>
