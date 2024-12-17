@@ -30,70 +30,53 @@
         </div>
       </section>
 
-      <!-- Upload Form Modal -->
-      <div v-if="showUploadForm" class="modal-overlay">
-        <div class="modal-content">
+      <!-- Details Modal -->
+      <div v-if="showDetailModal" class="modal-overlay" @click="closeDetailModal">
+        <div class="modal-content" @click.stop>
+          <!-- Modal Header -->
+          <h2 class="modal-title">{{ selectedPost.item_name }}</h2>
 
-          <h2 style="font-size: 25px; font-weight: bolder;" class="mb-3">Add Item</h2>
+          <!-- Modal Image Section -->
+          <div class="modal-image">
+            <img v-if="selectedPost.image_url" :src="selectedPost.image_url" alt="Item Image" class="card-image" />
+          </div>
 
-          <form @submit.prevent="submitForm" enctype="multipart/form-data">
-            <div class="form-grid">
-              <!-- Left Column -->
-              <div class="form-column">
-                <div class="form-group">
-                  <label for="itemName">Item Name</label>
-                  <input type="text" id="itemName" v-model="newItem.item_name" required />
-                </div>
-                <div class="form-group">
-                  <label for="itemStatus">Status</label>
-                  <div id="itemStatus" class="radio-group">
-                    <label>
-                      <input type="radio" v-model="newItem.status" value="Lost" required />Lost
-                    </label>
-                    <label>
-                      <input type="radio" v-model="newItem.status" value="Found" required />Found
-                    </label>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label for="category">Category</label>
-                  <select id="category" v-model="newItem.category" required>
-                    <option value="Electronics">Electronics</option>
-                    <option value="Clothing">Clothing</option>
-                    <option value="Wallets">Wallets</option>
-                    <option value="Bags">Bags</option>
-                    <option value="Jewelry">Jewelry</option>
-                    <option value="Cards">Cards</option>
-                    <option value="Books">Books</option>
-                    <option value="Accessories">Accessories</option>
-                  </select>
-                </div>
-                <div class="form-group" v-if="newItem.status === 'Lost'">
-                  <label for="dateLost">Date of Loss</label>
-                  <input type="date" id="dateLost" v-model="newItem.lost_date" required />
-                </div>
-                <div class="form-group" v-if="newItem.status === 'Found'">
-                  <label for="dateFound">Date Found</label>
-                  <input type="date" id="dateFound" v-model="newItem.found_date" required />
-                </div>
-                <div class="form-group">
-                  <label for="description">Item Description</label>
-                  <textarea id="description" v-model="newItem.description" rows="3" required></textarea>
-                </div>
-                <div class="form-group">
-                  <label for="facebookLink">Facebook Link</label>
-                  <input type="url" id="facebookLink" v-model="newItem.facebook_link" required />
-                </div>
-                <div class="form-group">
-                  <label for="contactNumber">Contact Number</label>
-                  <input type="tel" id="contactNumber" v-model="newItem.contact_number" required />
-                </div>
-                <div class="form-group">
-                  <label for="itemImage">Upload Image</label>
-                  <input type="file" id="itemImage" accept="image/*" @change="handleFileUpload" />
-                  <img v-if="newItem.image_preview_url" :src="newItem.image_preview_url" alt="Preview"
-                    class="image-preview" />
-                </div>
+          <!-- Edit Form (Conditional) -->
+          <div v-if="isEditing" class="modal-form">
+            <form @submit.prevent="saveChanges">
+              <div class="form-group">
+                <label for="edit-item-name">Item Name</label>
+                <input type="text" id="edit-item-name" v-model="selectedPost.item_name" required class="input-field" />
+              </div>
+              <div class="form-group">
+                <label for="edit-status">Status</label>
+                <select v-model="selectedPost.isFound" required class="input-field">
+                  <option :value="true">Found</option>
+                  <option :value="false">Lost</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="edit-category">Category</label>
+                <input type="text" id="edit-category" v-model="selectedPost.category" required class="input-field" />
+              </div>
+              <div class="form-group">
+                <label for="edit-description">Description</label>
+                <input type="text" id="edit-description" v-model="selectedPost.description" required class="input-field" />
+              </div>
+              <div class="form-group">
+                <label for="edit-facebook-link">Facebook Link</label>
+                <input type="url" id="edit-facebook-link" v-model="selectedPost.facebook_link" class="input-field" />
+              </div>
+              <div class="form-group">
+                <label for="edit-contact-number">Contact Number</label>
+                <input type="text" id="edit-contact-number" v-model="selectedPost.contact_number" class="input-field" />
+              </div>
+              <div class="form-group">
+                <label for="edit-image-url">Item Image</label>
+                <input type="file" id="edit-image-url" @change="handleImageChange" class="input-file" />
+              </div>
+              <div v-if="selectedPost.image_url">
+                <img :src="selectedPost.image_url" alt="Image Preview" class="image-preview" />
               </div>
               <div class="form-column">
                 <div class="form-group">
@@ -129,9 +112,8 @@
       </div>
     </main>
 
-    <button class="floating-btn" @click="showUploadForm = true">
-      <span class="plus-icon">+</span>
-    </button>
+    <!-- Footer Bar -->
+    <FooterBar />
   </div>
 </template>
 
@@ -140,7 +122,7 @@ import Map from "./map.vue";
 import axios from "axios";
 
 export default {
-  components: { Map },
+  components: { HeaderBar, FooterBar },
   data() {
     return {
       newItem: {
@@ -181,10 +163,7 @@ export default {
     },
     async fetchPosts() {
       try {
-        const [lostResponse, foundResponse] = await Promise.all([
-          axios.get(window.lostItemsUrl),
-          axios.get(window.foundItemsUrl),
-        ]);
+        const [lostResponse, foundResponse] = await Promise.all([axios.get(window.lostItemsUrl), axios.get(window.foundItemsUrl)]);
         const lostPosts = lostResponse.data.map(post => ({ ...post, isFound: false }));
         const foundPosts = foundResponse.data.map(post => ({ ...post, isFound: true }));
         this.posts = [...lostPosts, ...foundPosts];
@@ -367,25 +346,46 @@ export default {
 </script>
 
 <style scoped>
+/* General Dashboard Layout */
 .dashboard {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
   height: 100vh;
+  background-color: #f8f9fa; /* Light gray background for the dashboard */
 }
 
 .dashboard-header {
   margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dashboard-header h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #333;
 }
 
 .search-bar input {
   width: 100%;
   max-width: 400px;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 5px;
+  font-size: 1rem;
+  color: #555;
+  background-color: #fff;
+  transition: border-color 0.3s ease;
 }
 
+.search-bar input:focus {
+  border-color: #008080; /* Focus effect on input */
+  outline: none;
+}
+
+/* Featured Posts Section */
 .featured-posts {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -393,22 +393,74 @@ export default {
 }
 
 .card {
-  background: white;
+  background: #fff;
   border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   position: relative;
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px); /* Subtle hover effect */
 }
 
 .card-image {
   width: 100%;
   height: 200px;
   object-fit: cover;
-  border-radius: 4px;
-  margin-bottom: 10px;
+  border-radius: 8px;
+  margin-bottom: 15px;
   cursor: pointer;
+  transition: opacity 0.3s ease;
 }
 
+.card-image:hover {
+  opacity: 0.8; /* Hover effect on image */
+}
+
+.card p {
+  margin: 10px 0;
+  color: #555;
+}
+
+.card .post-date {
+  font-size: 0.9rem;
+  color: #888;
+}
+
+.card .post-info {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.card .post-info strong {
+  font-weight: bold;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.delete-btn:hover {
+  background-color: #c0392b;
+}
+
+/* Modal (Upload Form) */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -423,20 +475,39 @@ export default {
 }
 
 .modal-content {
-  background: white;
-  padding: 20px;
+  background: #fff;
+  padding: 25px;
   border-radius: 8px;
-  width: 90%;
-  max-width: 1000px;
+  width: 100%;
+  max-width: 900px;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+h2 {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #333;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 30px;
 }
 
 .form-column {
@@ -446,95 +517,78 @@ export default {
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 5px;
+  font-size: 1rem;
   font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
 }
 
 .form-group input,
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: 8px;
+  padding: 12px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 5px;
+  font-size: 1rem;
+  color: #333;
+  background-color: #fff;
+  transition: border-color 0.3s ease;
 }
 
-.form-select {
-  height: 38px;
-  background-color: white;
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: #008080;
+  outline: none;
+}
+
+/* Image Preview */
+.image-preview {
+  max-width: 200px;
+  max-height: 200px;
+  margin-top: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .radio-group {
   display: flex;
-  gap: 30px;
+  gap: 20px;
+  font-size: 1rem;
 }
 
 .radio-group label {
   display: flex;
   align-items: center;
+  color: #333;
 }
 
-/* Customize the radio buttons to be round */
 .radio-group input[type="radio"] {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  /* This makes the radio button round */
-  border: 2px solid #4CAF50;
-  /* Green border */
-  background-color: white;
-  margin-right: 5px;
+  border: 2px solid #008080;
+  background-color: #fff;
+  margin-right: 8px;
   cursor: pointer;
-  position: relative;
 }
 
-.radio-group input[type="radio"]:checked {
-  background-color: #4CAF50;
-  /* Green background when checked */
-  border-color: #4CAF50;
-  /* Green border when checked */
+.modal-actions .btn.primary:hover {
+  background-color: #347ea3;
+  transform: translateY(-2px);
 }
 
-.radio-group input[type="radio"]:checked::before {
-  content: '';
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  width: 8px;
-  height: 8px;
-  background-color: white;
-  /* Inner white circle */
-  border-radius: 50%;
-}
-
-.map-wrapper {
-  position: relative;
-  width: 100%;
-  height: 750px;
-  border-radius: 4px;
+/* Modal Content */
+.modal-content {
+  background-color: #fff;
+  border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 20px;
-}
-
-.location-status {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.9);
-  padding: 5px 15px;
-  border-radius: 20px;
-  z-index: 99;
-  font-size: 14px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
 }
 
 .map-overlay {
@@ -543,28 +597,93 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 100;
+  z-index: 99;
 }
 
-.image-preview {
-  max-width: 200px;
-  max-height: 200px;
-  margin-top: 10px;
-  border-radius: 4px;
+.location-status {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-size: 14px;
+  color: #333;
 }
 
+.floating-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #008080;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  transition: transform 0.3s ease;
+}
+
+.floating-btn:hover {
+  transform: translateY(-5px);
+}
+
+.submit-btn,
+.cancel-btn {
+  padding: 12px 20px;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.submit-btn {
+  background-color: #008080;
+  color: white;
+  border: none;
+}
+
+.submit-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: #007373;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+}
+
+.cancel-btn:hover {
+  background-color: #5a6268;
+}
+
+/* Modal Cancel and Submit Button Spacing */
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  gap: 10px;
 }
 
+/* Spinner */
 .spinner {
-  display: inline-block;
   width: 20px;
   height: 20px;
   border: 3px solid rgba(255, 255, 255, 0.3);
@@ -577,84 +696,5 @@ export default {
   to {
     transform: rotate(360deg);
   }
-}
-
-.submit-btn {
-  background-color: #008080;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  min-width: 100px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.submit-btn:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.cancel-btn {
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-right: 10px;
-}
-
-.floating-btn {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #008080;
-  color: white;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  z-index: 100;
-}
-
-.delete-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(255, 0, 0, 0.7);
-  color: white;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.enlarged-image {
-  max-width: 90%;
-  max-height: 90vh;
-  object-fit: contain;
-}
-
-.add-location-btn {
-  background: #008080;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
 }
 </style>
