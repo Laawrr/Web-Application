@@ -6,35 +6,53 @@ use App\Models\Comment;
 use App\Models\LostItem;
 use App\Models\FoundItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
 
 class CommentController extends Controller
 {
     // Store a comment
+   
     public function store(Request $request)
     {
-        // Ensure the user is authenticated
-        if (!auth()->check()) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        try {
+            // Ensure the user is authenticated
+            if (!auth()->check()) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            // Validate the request
+            $request->validate([
+                'item_type' => 'required|string|in:lost,found',
+                'item_id' => ['required', 'integer', function ($attribute, $value, $fail) {
+                    if (!LostItem::find($value) && !FoundItem::find($value)) {
+                        $fail('The selected item does not exist in either Lost or Found items.');
+                    }
+                }],
+                'text' => 'required|string|max:500',
+            ]);
+
+            Log::info('Request validated successfully', ['data' => $request->all()]);
+
+            // Determine the model based on item_type
+            $model = $request->item_type === 'lost' ? LostItem::class : FoundItem::class;
+
+            // Find the item and create the comment
+            $item = $model::findOrFail($request->item_id);
+
+            // Add logging to verify item found
+            Log::info('Item found', ['item' => $item]);
+
+            $comment = $item->comments()->create([
+                'user_id' => auth()->id(),
+                'text' => $request->text,
+            ]);
+
+            return response()->json(['success' => true, 'comment' => $comment], 201);
+        } catch (\Exception $e) {
+            Log::error('Error in storing comment', ['exception' => $e->getMessage()]);
+            return response()->json(['error' => 'Internal Server Error'], 500);
         }
-
-        // Validate the request
-        $request->validate([
-            'item_type' => 'required|string|in:lost,found',
-            'item_id' => 'required|integer|exists:lost_items,id,found_items,id',  // Check if the item exists in either table
-            'text' => 'required|string|max:500',
-        ]);
-
-        // Determine the model based on item_type
-        $model = $request->item_type === 'lost' ? LostItem::class : FoundItem::class;
-
-        // Find the item and create the comment
-        $item = $model::findOrFail($request->item_id);
-        $comment = $item->comments()->create([
-            'user_id' => auth()->id(),  // Use authenticated user ID
-            'text' => $request->text,
-        ]);
-
-        return response()->json(['success' => true, 'comment' => $comment], 201);
     }
 
     // Fetch comments for a specific item

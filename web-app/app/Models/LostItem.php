@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Notification;
 
 class LostItem extends Model
 {
@@ -31,4 +32,13 @@ class LostItem extends Model
         return $this->morphMany(Comment::class, 'commentable');
     }
 
+    public function notifyUser()
+    {
+        // Create a new notification
+        Notification::create([
+            'type' => 'lost_item_reported',
+            'data' => ['item_name' => $this->item_name],
+            'user_id' => $this->user_id,
+        ]);
+    }
 }
