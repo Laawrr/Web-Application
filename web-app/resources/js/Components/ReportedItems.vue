@@ -17,17 +17,30 @@
       ></v-text-field>
       <v-divider></v-divider>
       <v-data-table
-        :headers="[
-          { title: 'Item Name', key: 'item_name' },
-          { title: 'Reporter', key: 'user.name' },
-          { title: 'Status', key: 'status' },
-          { title: 'Type', key: 'type' },
-          { title: 'Date', key: 'created_at' }
-        ]"
-        :items="items"
+        :headers="headers"
+        :items="formattedItems"
         :search="search"
+        :loading="loading"
         :items-per-page="10"
+        class="elevation-1"
+        v-model:page="page"
       >
+        <template v-slot:progress>
+          <v-progress-linear
+            color="#4fb9af"
+            height="2"
+            indeterminate
+          ></v-progress-linear>
+        </template>
+        <template v-slot:header>
+          <tr>
+            <th>Item Name</th>
+            <th>Reporter</th>
+            <th>Status</th>
+            <th>Type</th>
+            <th>Date</th>
+          </tr>
+        </template>
         <template v-slot:bottom="props">
           <div class="d-flex align-center justify-center pa-4 gap-4">
             <v-btn
@@ -38,11 +51,11 @@
             >
               Previous
             </v-btn>
-            <span>Page {{ page }} of {{ Math.ceil(items.length / 10) }}</span>
+            <span>Page {{ page }} of {{ Math.ceil(formattedItems.length / 10) }}</span>
             <v-btn
               style="background-color: #4fb9af; color: white; text-align: center"
               variant="flat"
-              :disabled="page >= Math.ceil(items.length / 10)"
+              :disabled="page >= Math.ceil(formattedItems.length / 10)"
               @click="page++"
             >
               Next
@@ -63,20 +76,72 @@ export default {
     return {
       search: '',
       page: 1,
+      headers: [
+        { 
+          text: 'Item Name',
+          value: 'item_name',
+          width: '25%',
+          align: 'start',
+          sortable: true,
+          filterable: true,
+        },
+        { 
+          text: 'Reporter',
+          value: 'user.name',
+          width: '20%',
+          align: 'start',
+          sortable: true,
+          filterable: true,
+        },
+        { 
+          text: 'Status',
+          value: 'status',
+          width: '15%',
+          align: 'start',
+          sortable: true,
+        },
+        { 
+          text: 'Type',
+          value: 'type',
+          width: '15%',
+          align: 'start',
+          sortable: true,
+        },
+        { 
+          text: 'Date',
+          value: 'created_at',
+          width: '15%',
+          align: 'start',
+          sortable: true,
+        },
+      ],
       items: [],
+      loading: true,
     };
+  },
+  computed: {
+    formattedItems() {
+      return this.items.map(item => ({
+        ...item,
+        type: item.type === 'lost' ? 'Lost Item' : 'Found Item',
+      }));
+    },
   },
   created() {
     this.fetchItems();
   },
   methods: {
     fetchItems() {
+      this.loading = true;
       axios.get('/admin/reported-items')
         .then(response => {
           this.items = [...response.data.lostItems, ...response.data.foundItems];
         })
         .catch(error => {
           console.error('Error fetching reported items:', error);
+        })
+        .finally(() => {
+          this.loading = false;
         });
     },
   },
@@ -86,5 +151,25 @@ export default {
 <style scoped>
 .v-data-table {
   background: white;
+  border-radius: 0 0 4px 4px;
+}
+
+:deep(.v-data-table-header th) {
+  color: rgba(0, 0, 0, 0.87) !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  background: white !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  border-bottom: thin solid rgba(0, 0, 0, 0.12) !important;
+}
+
+:deep(.v-data-table tbody td) {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.text-h5 {
+  color: rgba(0, 0, 0, 0.87);
+  font-weight: 500;
 }
 </style>

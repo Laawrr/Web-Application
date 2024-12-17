@@ -25,19 +25,30 @@
       ></v-text-field>
       <v-divider></v-divider>
       <v-data-table
-        :headers="[
-          { title: 'Name', key: 'name' },
-          { title: 'Email', key: 'email' },
-          { title: 'Role', key: 'role' },
-          { title: 'Date Created', key: 'created_at' },
-          { title: 'Actions', key: 'actions' }
-        ]"
+        :headers="headers"
         :items="filteredUsers"
         :search="search"
-        class="elevation-1"
+        :loading="loading"
         :items-per-page="10"
+        class="elevation-1"
         v-model:page="page"
       >
+        <template v-slot:progress>
+          <v-progress-linear
+            color="#4fb9af"
+            height="2"
+            indeterminate
+          ></v-progress-linear>
+        </template>
+        <template v-slot:header>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Date Created</th>
+            <th>Actions</th>
+          </tr>
+        </template>
         <template v-slot:item.actions="{ item }">
           <div class="d-flex align-center">
             <font-awesome-icon
@@ -216,6 +227,7 @@ export default {
       ],
       users: [],
       page: 1,
+      loading: true,
       showAddDialog: false,
       newUser: {
         name: '',
@@ -244,12 +256,16 @@ export default {
 
   methods: {
     fetchLogs() {
+      this.loading = true;
       axios.get('/admin/users')
         .then(response => {
           this.users = response.data.users;
         })
         .catch(error => {
           console.error('Error fetching users:', error);
+        })
+        .finally(() => {
+          this.loading = false;
         });
     },
 
@@ -285,5 +301,33 @@ export default {
 <style scoped>
 .v-data-table {
   background: white;
+  border-radius: 0 0 4px 4px;
+}
+
+.action-icon {
+  font-size: 1.2rem;
+}
+
+.action-icon:hover {
+  opacity: 0.8;
+}
+
+:deep(.v-data-table-header th) {
+  color: rgba(0, 0, 0, 0.87) !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  background: white !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  border-bottom: thin solid rgba(0, 0, 0, 0.12) !important;
+}
+
+:deep(.v-data-table tbody td) {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.text-h5 {
+  color: rgba(0, 0, 0, 0.87);
+  font-weight: 500;
 }
 </style>
