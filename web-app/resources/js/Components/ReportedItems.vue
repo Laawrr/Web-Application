@@ -17,17 +17,33 @@
       ></v-text-field>
       <v-divider></v-divider>
       <v-data-table
-        :headers="[
-          { title: 'Item Name', key: 'item_name' },
-          { title: 'Reporter', key: 'user.name' },
-          { title: 'Status', key: 'status' },
-          { title: 'Type', key: 'type' },
-          { title: 'Date', key: 'created_at' }
-        ]"
-        :items="items"
+        :headers="headers"
+        :items="formattedItems"
         :search="search"
+        :loading="loading"
         :items-per-page="10"
+        class="elevation-1"
+        v-model:page="page"
       >
+        <template v-slot:progress>
+          <v-progress-linear
+            color="#4fb9af"
+            height="2"
+            indeterminate
+          ></v-progress-linear>
+        </template>
+        <template v-slot:header.item_name>
+          <span class="font-weight-black">Item Name</span>
+        </template>
+        <template v-slot:header.user.name>
+          <span class="font-weight-black">Reporter</span>
+        </template>
+        <template v-slot:header.type>
+          <span class="font-weight-black">Type</span>
+        </template>
+        <template v-slot:header.created_at>
+          <span class="font-weight-black">Date</span>
+        </template>
         <template v-slot:bottom="props">
           <div class="d-flex align-center justify-center pa-4 gap-4">
             <v-btn
@@ -38,11 +54,11 @@
             >
               Previous
             </v-btn>
-            <span>Page {{ page }} of {{ Math.ceil(items.length / 10) }}</span>
+            <span>Page {{ page }} of {{ Math.ceil(formattedItems.length / 10) }}</span>
             <v-btn
               style="background-color: #4fb9af; color: white; text-align: center"
               variant="flat"
-              :disabled="page >= Math.ceil(items.length / 10)"
+              :disabled="page >= Math.ceil(formattedItems.length / 10)"
               @click="page++"
             >
               Next
@@ -63,20 +79,65 @@ export default {
     return {
       search: '',
       page: 1,
+      headers: [
+        { 
+          text: 'Item Name',
+          value: 'item_name',
+          width: '25%',
+          align: 'start',
+          sortable: true,
+          filterable: true,
+        },
+        { 
+          text: 'Reporter',
+          value: 'user.name',
+          width: '20%',
+          align: 'start',
+          sortable: true,
+          filterable: true,
+        },
+        { 
+          text: 'Type',
+          value: 'type',
+          width: '15%',
+          align: 'start',
+          sortable: true,
+        },
+        { 
+          text: 'Date',
+          value: 'created_at',
+          width: '15%',
+          align: 'start',
+          sortable: true,
+        },
+      ],
       items: [],
+      loading: true,
     };
+  },
+  computed: {
+    formattedItems() {
+      return this.items.map(item => ({
+        ...item,
+        type: item.type === 'lost' ? 'Lost Item' : 'Found Item',
+      }));
+    },
   },
   created() {
     this.fetchItems();
   },
   methods: {
     fetchItems() {
+      this.loading = true;
       axios.get('/admin/reported-items')
         .then(response => {
           this.items = [...response.data.lostItems, ...response.data.foundItems];
         })
         .catch(error => {
           console.error('Error fetching reported items:', error);
+        })
+        .finally(() => {
+          this.loading = false;
         });
     },
   },
@@ -86,5 +147,35 @@ export default {
 <style scoped>
 .v-data-table {
   background: white;
+  border-radius: 0 0 4px 4px;
+}
+
+:deep(.v-data-table-header) {
+  background-color: #f5f5f5 !important;
+}
+
+:deep(.v-data-table-header th) {
+  color: black !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  padding: 12px 16px !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+:deep(.v-data-table tbody td) {
+  color: rgba(0, 0, 0, 0.87) !important;
+  padding: 8px 16px !important;
+}
+
+.text-h5 {
+  color: rgba(0, 0, 0, 0.87);
+  font-weight: 500;
+}
+
+.font-weight-black {
+  font-weight: 900 !important;
+  color: black !important;
 }
 </style>

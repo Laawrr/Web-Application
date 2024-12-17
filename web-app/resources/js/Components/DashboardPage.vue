@@ -1,39 +1,42 @@
 <template>
-  <div>
-    <main class="dashboard">
-      <!-- Dashboard Header -->
-      <section class="dashboard-header">
-        <h1>Lost and Found</h1>
-        <div class="search-bar">
-          <input type="text" v-model="searchQuery" placeholder="Search for lost items..." @input="filterPosts" />
-        </div>
-      </section>
+  <div class="dashboard-container" :style="containerStyle">
+    <div>
+      <main class="dashboard">
+        <!-- Dashboard Header -->
+        <section class="dashboard-header">
+          <h1>Lost and Found</h1>
+          <div class="search-bar">
+            <input type="text" v-model="searchQuery" placeholder="Search for lost items..." @input="filterPosts" />
+          </div>
+        </section>
 
-      <!-- Featured Posts -->
-      <section class="featured-posts">
-        <div v-if="filteredPosts.length === 0" class="no-posts">
-          <p>No posts found.</p>
-        </div>
-        <div v-for="post in filteredPosts" :key="post.id" class="card">
-          <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image clickable"
-            @click="enlargeImage(post.image_url)" />
-          <p class="post-date">{{ post.lost_date || post.found_date }}</p>
+        <!-- Featured Posts -->
+        <section class="featured-posts">
+          <div v-if="filteredPosts.length === 0" class="no-posts">
+            <p>No posts found.</p>
+          </div>
+          <div v-for="post in filteredPosts" :key="post.id" class="card">
+            <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image clickable"
+              @click="enlargeImage(post.image_url)" />
+            <p class="post-date">{{ post.lost_date || post.found_date }}</p>
 
-          <p class="post-info"><strong>Status:</strong> {{ post.isFound ? 'Found' : 'Lost' }}</p>
-          <p class="post-info"><strong>Category:</strong> {{ post.category }}</p>
-          <p class="post-info"><strong>Description:</strong> {{ post.description }}</p>
-          <p class="post-info"><strong>Facebook:</strong> {{ post.facebook_link }}</p>
-          <p class="post-info"><strong>Contact:</strong> {{ post.contact_number }}</p>
-          <button @click="deletePost(post.id)" class="delete-btn">
-            <span class="delete-icon">&#10005;</span>
-          </button>
-        </div>
-      </section>
+            <p class="post-info"><strong>Status:</strong> {{ post.isFound ? 'Found' : 'Lost' }}</p>
+            <p class="post-info"><strong>Category:</strong> {{ post.category }}</p>
+            <p class="post-info"><strong>Description:</strong> {{ post.description }}</p>
+            <p class="post-info"><strong>Facebook:</strong> {{ post.facebook_link }}</p>
+            <p class="post-info"><strong>Contact:</strong> {{ post.contact_number }}</p>
+            <button @click="deletePost(post.id)" class="delete-btn">
+              <span class="delete-icon">&#10005;</span>
+            </button>
+          </div>
+        </section>
 
       <!-- Upload Form Modal -->
       <div v-if="showUploadForm" class="modal-overlay">
         <div class="modal-content">
-          <h2>Add Lost Item</h2>
+
+          <h2 style="font-size: 25px; font-weight: bolder;" class="mb-3">Add Item</h2>
+
           <form @submit.prevent="submitForm" enctype="multipart/form-data">
             <div class="form-grid">
               <!-- Left Column -->
@@ -95,29 +98,42 @@
               </div>
               <div class="form-column">
                 <div class="form-group">
-                  <label>Location</label>
                   <div class="map-wrapper">
-                    <Map @location-selected="updateLocation" />
+                    <div class="map-overlay" v-if="!locationSelected">
+                      <button class="add-location-btn" @click="enableLocationSelection">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Add Location (Click to Enable Map)
+                      </button>
+                    </div>
+                    <div v-if="locationSelected" class="location-status">
+                      <span v-if="newItem.location">Location selected ✓</span>
+                      <span v-else>Click on the map to place a pin</span>
+                    </div>
+                    <Map ref="mapComponent" @location-selected="updateLocation" :disabled="!locationSelected" />
                   </div>
                 </div>
               </div>
             </div>
             <div class="form-actions">
-              <button type="button" class="btn secondary" @click="closeUploadForm">Cancel</button>
-              <button type="submit" class="btn primary">Submit</button>
+              <button type="button" @click="closeUploadForm" class="cancel-btn">Cancel</button>
+              <button type="submit" class="submit-btn" :disabled="isSubmitting || !newItem.location">
+                <span v-if="isSubmitting" class="spinner"></span>
+                <span v-else>Submit</span>
+              </button>
             </div>
           </form>
         </div>
       </div>
 
-      <div v-if="enlargedImage" class="modal-overlay" @click="closeImage">
-        <img :src="enlargedImage" alt="Enlarged view" class="enlarged-image" />
-      </div>
-    </main>
+        <div v-if="enlargedImage" class="modal-overlay" @click="closeImage">
+          <img :src="enlargedImage" alt="Enlarged view" class="enlarged-image" />
+        </div>
+      </main>
 
-    <button class="floating-btn" @click="showUploadForm = true">
-      <span class="plus-icon">+</span>
-    </button>
+      <button class="floating-btn" @click="showUploadForm = true">
+        <span class="plus-icon">+</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -128,46 +144,41 @@ import axios from "axios";
 export default {
   components: { Map },
   data() {
-  return {
-    newItem: {
-      item_name: "",
-      status: "",
-      category: "",
-      lost_date: "",
-      found_date: "",
-      description: "",
-      facebook_link: "",
-      contact_number: "",
-      location: null,
-      image_url: null,
-      user_id: null,
-    },
-    posts: [
-      // Sample post to be displayed initially
-      {
-        id: 1,
-        item_name: "Lost Wallet",
-        status: "Lost",
-        category: "Wallets",
-        lost_date: "2024-12-18",
+    return {
+      newItem: {
+        item_name: "",
+        status: "",
+        category: "",
+        lost_date: "",
         found_date: "",
-        description: "A black leather wallet with important cards and cash.",
-        facebook_link: "https://facebook.com/sample",
-        contact_number: "123-456-7890",
-        image_url: "https://via.placeholder.com/150",  // Replace with a valid image URL or placeholder
-        isFound: false,
+        description: "",
+        facebook_link: "",
+        contact_number: "",
+        location: null,
+        image_file: null,
+        image_preview_url: null,
+        user_id: null,
       },
-      // You can add more sample posts here if needed.
-    ],
-    filteredPosts: [],
-    searchQuery: "",
-    showUploadForm: false,
-    enlargedImage: null,
-  };
-},
+      posts: [],
+      filteredPosts: [],
+      searchQuery: "",
+      showUploadForm: false,
+      enlargedImage: null,
+      locationSelected: false,
+      isSubmitting: false,
+    };
+  },
   created() {
     this.fetchPosts();
     this.fetchUserId();
+  },
+  watch: {
+    posts: {
+      handler(newPosts) {
+        this.updateSpacing(newPosts);
+      },
+      deep: true
+    }
   },
   methods: {
     async fetchUserId() {
@@ -293,19 +304,20 @@ export default {
         }
       }
     },
+    enableLocationSelection() {
+      this.locationSelected = true;
+    },
   },
 };
 </script>
 
 
 <style scoped>
-/* General Dashboard Layout */
 .dashboard {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
   height: 100vh;
-  background-color: #f8f9fa; /* Light gray background for the dashboard */
 }
 
 .dashboard-header {
@@ -343,6 +355,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
+  margin-bottom: 40px;
 }
 
 .card {
@@ -351,11 +364,6 @@ export default {
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   position: relative;
-  transition: transform 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-5px); /* Subtle hover effect */
 }
 
 .card-image {
