@@ -259,11 +259,8 @@ export default {
           longitude: this.newItem.location.lng
         };
 
-        // Add location field specifically for lost items
-        if (this.newItem.status === 'Lost') {
-          formFields.location = `${this.newItem.location.lat},${this.newItem.location.lng}`;
-        }
-        
+        formFields.location = `${this.newItem.location.lat},${this.newItem.location.lng}`;
+
         // Add lost_date or found_date based on status
         if (this.newItem.status === 'Lost') {
           formFields.lost_date = this.newItem.lost_date;
