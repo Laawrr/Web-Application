@@ -17,7 +17,7 @@
       <v-divider></v-divider>
       <v-data-table
         :headers="headers"
-        :items="items"
+        :items="formattedItems"
         :search="search"
         class="elevation-1"
       ></v-data-table>
@@ -32,19 +32,39 @@ export default {
     return {
       search: '',
       headers: [
-        { text: 'Item Name', value: 'name', width: '25%' },
-        { text: 'Reporter', value: 'reporter', width: '20%' },
+        { text: 'Item Name', value: 'item_name', width: '25%' },  
+        { text: 'Reporter', value: 'user.name', width: '20%' }, 
         { text: 'Date', value: 'date', width: '15%' },
-        { text: 'Status', value: 'status', width: '15%' },
-        { text: 'Actions', value: 'actions', width: '25%' },
+        { text: 'Status', value: 'claim_status', width: '15%' },
       ],
-      items: [
-        { name: 'Lost Phone', reporter: 'John Doe', date: '2023-12-16', status: 'Pending' },
-        { name: 'Found Wallet', reporter: 'Jane Smith', date: '2023-12-15', status: 'Resolved' },
-      ],
+      items: [],
+    };
+  },
+  computed: {
+    formattedItems() {
+      return this.items.map(item => {
+        return {
+          ...item,
+          date: item.found_date || item.lost_date, 
+        };
+      });
+    },
+  },
+  created() {
+    this.fetchLogs();
+  },
+  methods: {
+    fetchLogs() {
+      axios.get('/admin/reported-items') 
+        .then(response => {
+          this.items = [...response.data.lostItems, ...response.data.foundItems];
+        })
+        .catch(error => {
+          console.error('Error fetching activity logs:', error);
+        });
     }
   },
-}
+};
 </script>
 
 <style scoped>

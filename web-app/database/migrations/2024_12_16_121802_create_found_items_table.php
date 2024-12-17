@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('found_items', function (Blueprint $table) {
             $table->id();
             $table->date('found_date');
+            $table->string('item_name');
             $table->string('facebook_link');
             $table->string('contact_number');
             $table->text('description'); 

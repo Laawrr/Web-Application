@@ -26,24 +26,36 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   name: 'UsersLog',
   data() {
     return {
       search: '',
       headers: [
-        { text: 'User', value: 'user', width: '20%' },
+        { text: 'Name', value: 'user.name', width: '20%' }, 
         { text: 'Action', value: 'action', width: '20%' },
-        { text: 'Date', value: 'date', width: '20%' },
-        { text: 'Details', value: 'details', width: '40%' },
+        { text: 'Time', value: 'action_time', width: '20%' },
       ],
-      logs: [
-        { user: 'John Doe', action: 'Login', date: '2023-12-16', details: 'Successful login' },
-        { user: 'Jane Smith', action: 'Update Profile', date: '2023-12-15', details: 'Changed password' },
-      ],
-    }
+      logs: [],
+    };
   },
-}
+  created() {
+    this.fetchLogs();
+  },
+  methods: {
+    fetchLogs() {
+      axios.get('/admin/users-log') 
+        .then(response => {
+          this.logs = response.data.activityLog;
+        })
+        .catch(error => {
+          console.error('Error fetching activity logs:', error);
+        });
+    },
+  },
+};
 </script>
 
 <style scoped>

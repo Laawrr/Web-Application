@@ -1,12 +1,12 @@
 <template>
     <div>
       <!-- You can add HeaderBar and FooterBar here if needed -->
-      
+      <HeaderBar/>
       
       <!-- The DashboardPage component is inserted here -->
       <DashboardPage />
       
-      
+      <FooterBar/>
     </div>
   </template>
   

@@ -30,70 +30,53 @@
         </div>
       </section>
 
-      <!-- Upload Form Modal -->
-      <div v-if="showUploadForm" class="modal-overlay">
-        <div class="modal-content">
+      <!-- Details Modal -->
+      <div v-if="showDetailModal" class="modal-overlay" @click="closeDetailModal">
+        <div class="modal-content" @click.stop>
+          <!-- Modal Header -->
+          <h2 class="modal-title">{{ selectedPost.item_name }}</h2>
 
-          <h2 style="font-size: 25px; font-weight: bolder;" class="mb-3">Add Item</h2>
+          <!-- Modal Image Section -->
+          <div class="modal-image">
+            <img v-if="selectedPost.image_url" :src="selectedPost.image_url" alt="Item Image" class="card-image" />
+          </div>
 
-          <form @submit.prevent="submitForm" enctype="multipart/form-data">
-            <div class="form-grid">
-              <!-- Left Column -->
-              <div class="form-column">
-                <div class="form-group">
-                  <label for="itemName">Item Name</label>
-                  <input type="text" id="itemName" v-model="newItem.item_name" required />
-                </div>
-                <div class="form-group">
-                  <label for="itemStatus">Status</label>
-                  <div id="itemStatus" class="radio-group">
-                    <label>
-                      <input type="radio" v-model="newItem.status" value="Lost" required />Lost
-                    </label>
-                    <label>
-                      <input type="radio" v-model="newItem.status" value="Found" required />Found
-                    </label>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label for="category">Category</label>
-                  <select id="category" v-model="newItem.category" required>
-                    <option value="Electronics">Electronics</option>
-                    <option value="Clothing">Clothing</option>
-                    <option value="Wallets">Wallets</option>
-                    <option value="Bags">Bags</option>
-                    <option value="Jewelry">Jewelry</option>
-                    <option value="Cards">Cards</option>
-                    <option value="Books">Books</option>
-                    <option value="Accessories">Accessories</option>
-                  </select>
-                </div>
-                <div class="form-group" v-if="newItem.status === 'Lost'">
-                  <label for="dateLost">Date of Loss</label>
-                  <input type="date" id="dateLost" v-model="newItem.lost_date" required />
-                </div>
-                <div class="form-group" v-if="newItem.status === 'Found'">
-                  <label for="dateFound">Date Found</label>
-                  <input type="date" id="dateFound" v-model="newItem.found_date" required />
-                </div>
-                <div class="form-group">
-                  <label for="description">Item Description</label>
-                  <textarea id="description" v-model="newItem.description" rows="3" required></textarea>
-                </div>
-                <div class="form-group">
-                  <label for="facebookLink">Facebook Link</label>
-                  <input type="url" id="facebookLink" v-model="newItem.facebook_link" required />
-                </div>
-                <div class="form-group">
-                  <label for="contactNumber">Contact Number</label>
-                  <input type="tel" id="contactNumber" v-model="newItem.contact_number" required />
-                </div>
-                <div class="form-group">
-                  <label for="itemImage">Upload Image</label>
-                  <input type="file" id="itemImage" accept="image/*" @change="handleFileUpload" />
-                  <img v-if="newItem.image_preview_url" :src="newItem.image_preview_url" alt="Preview"
-                    class="image-preview" />
-                </div>
+          <!-- Edit Form (Conditional) -->
+          <div v-if="isEditing" class="modal-form">
+            <form @submit.prevent="saveChanges">
+              <div class="form-group">
+                <label for="edit-item-name">Item Name</label>
+                <input type="text" id="edit-item-name" v-model="selectedPost.item_name" required class="input-field" />
+              </div>
+              <div class="form-group">
+                <label for="edit-status">Status</label>
+                <select v-model="selectedPost.isFound" required class="input-field">
+                  <option :value="true">Found</option>
+                  <option :value="false">Lost</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="edit-category">Category</label>
+                <input type="text" id="edit-category" v-model="selectedPost.category" required class="input-field" />
+              </div>
+              <div class="form-group">
+                <label for="edit-description">Description</label>
+                <input type="text" id="edit-description" v-model="selectedPost.description" required class="input-field" />
+              </div>
+              <div class="form-group">
+                <label for="edit-facebook-link">Facebook Link</label>
+                <input type="url" id="edit-facebook-link" v-model="selectedPost.facebook_link" class="input-field" />
+              </div>
+              <div class="form-group">
+                <label for="edit-contact-number">Contact Number</label>
+                <input type="text" id="edit-contact-number" v-model="selectedPost.contact_number" class="input-field" />
+              </div>
+              <div class="form-group">
+                <label for="edit-image-url">Item Image</label>
+                <input type="file" id="edit-image-url" @change="handleImageChange" class="input-file" />
+              </div>
+              <div v-if="selectedPost.image_url">
+                <img :src="selectedPost.image_url" alt="Image Preview" class="image-preview" />
               </div>
               <div class="form-column">
                 <div class="form-group">
@@ -129,9 +112,8 @@
       </div>
     </main>
 
-    <button class="floating-btn" @click="showUploadForm = true">
-      <span class="plus-icon">+</span>
-    </button>
+    <!-- Footer Bar -->
+    <FooterBar />
   </div>
 </template>
 
@@ -140,7 +122,7 @@ import Map from "./map.vue";
 import axios from "axios";
 
 export default {
-  components: { Map },
+  components: { HeaderBar, FooterBar },
   data() {
     return {
       newItem: {
@@ -181,10 +163,7 @@ export default {
     },
     async fetchPosts() {
       try {
-        const [lostResponse, foundResponse] = await Promise.all([
-          axios.get(window.lostItemsUrl),
-          axios.get(window.foundItemsUrl),
-        ]);
+        const [lostResponse, foundResponse] = await Promise.all([axios.get(window.lostItemsUrl), axios.get(window.foundItemsUrl)]);
         const lostPosts = lostResponse.data.map(post => ({ ...post, isFound: false }));
         const foundPosts = foundResponse.data.map(post => ({ ...post, isFound: true }));
         this.posts = [...lostPosts, ...foundPosts];
@@ -599,14 +578,14 @@ h2 {
   cursor: pointer;
 }
 
-.radio-group input[type="radio"]:checked {
-  background-color: #008080;
+.modal-actions .btn.primary:hover {
+  background-color: #347ea3;
+  transform: translateY(-2px);
 }
 
-.map-wrapper {
-  position: relative;
-  width: 100%;
-  height: 450px;
+/* Modal Content */
+.modal-content {
+  background-color: #fff;
   border-radius: 8px;
   overflow: hidden;
   margin-top: 20px;
@@ -719,3 +698,4 @@ h2 {
   }
 }
 </style>
+
