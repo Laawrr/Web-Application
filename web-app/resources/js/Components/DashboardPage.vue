@@ -33,7 +33,9 @@
       <!-- Upload Form Modal -->
       <div v-if="showUploadForm" class="modal-overlay">
         <div class="modal-content">
-          <h2>Add Lost Item</h2>
+
+          <h2 style="font-size: 25px; font-weight: bolder;" class="mb-3">Add Item</h2>
+
           <form @submit.prevent="submitForm" enctype="multipart/form-data">
             <div class="form-grid">
               <!-- Left Column -->
@@ -95,16 +97,28 @@
               </div>
               <div class="form-column">
                 <div class="form-group">
-                  <label>Location</label>
                   <div class="map-wrapper">
-                    <Map @location-selected="updateLocation" />
+                    <div class="map-overlay" v-if="!locationSelected">
+                      <button class="add-location-btn" @click="enableLocationSelection">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Add Location (Click to Enable Map)
+                      </button>
+                    </div>
+                    <div v-if="locationSelected" class="location-status">
+                      <span v-if="newItem.location">Location selected ✓</span>
+                      <span v-else>Click on the map to place a pin</span>
+                    </div>
+                    <Map ref="mapComponent" @location-selected="updateLocation" :disabled="!locationSelected" />
                   </div>
                 </div>
               </div>
             </div>
             <div class="form-actions">
-              <button type="button" class="btn secondary" @click="closeUploadForm">Cancel</button>
-              <button type="submit" class="btn primary">Submit</button>
+              <button type="button" @click="closeUploadForm" class="cancel-btn">Cancel</button>
+              <button type="submit" class="submit-btn" :disabled="isSubmitting || !newItem.location">
+                <span v-if="isSubmitting" class="spinner"></span>
+                <span v-else>Submit</span>
+              </button>
             </div>
           </form>
         </div>
@@ -139,7 +153,8 @@ export default {
         facebook_link: "",
         contact_number: "",
         location: null,
-        image_url: null,
+        image_file: null,
+        image_preview_url: null,
         user_id: null,
       },
       posts: [],
@@ -147,6 +162,8 @@ export default {
       searchQuery: "",
       showUploadForm: false,
       enlargedImage: null,
+      locationSelected: false,
+      isSubmitting: false,
     };
   },
   created() {
@@ -184,12 +201,12 @@ export default {
     handleFileUpload(event) {
       const file = event.target.files[0];
       if (file) {
-        this.newItem.image_url = file;  // Store the raw file for later use (upload)
-
-        // Create a separate property for the image preview URL
+        this.newItem.image_file = file;
+        
+        // Create a preview URL
         const reader = new FileReader();
         reader.onload = (e) => {
-          this.newItem.image_preview_url = e.target.result;  // Store the base64 preview URL
+          this.newItem.image_preview_url = e.target.result;
         };
         reader.readAsDataURL(file);
       }
@@ -205,51 +222,117 @@ export default {
         facebook_link: "",
         contact_number: "",
         location: null,
-        image_url: null,
+        image_file: null,
+        image_preview_url: null,
         user_id: this.newItem.user_id,
       };
     },
     updateLocation(location) {
       this.newItem.location = location;
-    },
-    previewImage(event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.newItem.image_url = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
+      this.locationSelected = true;
     },
     async submitForm() {
+      if (!this.newItem.location) {
+        this.showError("Please select a location on the map first");
+        return;
+      }
+      
+      this.isSubmitting = true;
       try {
         const formData = new FormData();
-        for (const key in this.newItem) {
-          formData.append(key, this.newItem[key]);
+        
+        // Handle the image file
+        if (this.newItem.image_file) {
+          formData.append('image_url', this.newItem.image_file); 
         }
-        const url =
-          this.newItem.status === "Lost" ? window.lostItemsStore : window.foundItemsStore;
+        
+        // Handle all other form fields
+        const formFields = {
+          item_name: this.newItem.item_name,
+          status: this.newItem.status,
+          category: this.newItem.category,
+          description: this.newItem.description,
+          facebook_link: this.newItem.facebook_link,
+          contact_number: this.newItem.contact_number,
+          user_id: this.newItem.user_id,
+          latitude: this.newItem.location.lat,
+          longitude: this.newItem.location.lng
+        };
 
-        await axios.post(url, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "X-CSRF-TOKEN": document
-              .querySelector('meta[name="csrf-token"]')
-              .getAttribute("content"),
-          },
+        // Add location field specifically for lost items
+        if (this.newItem.status === 'Lost') {
+          formFields.location = `${this.newItem.location.lat},${this.newItem.location.lng}`;
+        }
+        
+        // Add lost_date or found_date based on status
+        if (this.newItem.status === 'Lost') {
+          formFields.lost_date = this.newItem.lost_date;
+        } else {
+          formFields.found_date = this.newItem.found_date;
+        }
+        
+        // Append all form fields
+        Object.keys(formFields).forEach(key => {
+          if (formFields[key] !== null && formFields[key] !== undefined) {
+            formData.append(key, formFields[key]);
+          }
         });
 
-        alert("Item stored successfully!");
-        this.fetchPosts();
+        // Get CSRF token from meta tag
+        const token = document.head.querySelector('meta[name="csrf-token"]');
+        
+        if (!token) {
+          this.showError("CSRF token not found. Please refresh the page.");
+          return;
+        }
+
+        // Add CSRF token to form data
+        formData.append('_token', token.content);
+
+        const url = this.newItem.status === "Lost" ? window.lostItemsStore : window.foundItemsStore;
+
+        const response = await axios.post(url, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "X-CSRF-TOKEN": token.content,
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          withCredentials: true
+        });
+
+        this.showSuccess("Post created successfully!");
         this.closeUploadForm();
+        await this.fetchPosts(); 
       } catch (error) {
-        console.error("Error submitting form:", error.message);
+        console.error('Form Data:', this.newItem); 
+        if (error.response && error.response.status === 422) {
+          // Handle validation errors
+          const validationErrors = error.response.data.errors;
+          const errorMessages = Object.values(validationErrors)
+            .flat()
+            .join('\n');
+          this.showError("Validation failed:\n" + errorMessages);
+        } else {
+          this.showError("Error creating post: " + error.message);
+        }
+      } finally {
+        this.isSubmitting = false;
       }
+    },
+    
+    showError(message) {
+      // Replace alert with a more user-friendly error display
+      const errorLines = message.split('\n');
+      const formattedMessage = errorLines.join('\n• ');
+      alert("• " + formattedMessage);
+    },
+    showSuccess(message) {
+      alert(message);
     },
     closeUploadForm() {
       this.showUploadForm = false;
       this.resetNewItem();
+      this.locationSelected = false;
     },
     enlargeImage(imageUrl) {
       this.enlargedImage = imageUrl;
@@ -257,35 +340,34 @@ export default {
     closeImage() {
       this.enlargedImage = null;
     },
-    closeUploadForm() {
-      this.showUploadForm = false;
-      this.resetNewItem();
-    },
     async deletePost(postId) {
       if (confirm("Are you sure you want to delete this post?")) {
         try {
-          const post = this.posts.find((post) => post.id === postId);
-          const endpoint =
-            post.isFound === true ? `/found-items/${postId}` : `/lost-items/${postId}`;
-          await axios.delete(endpoint);
-
-          this.posts = this.posts.filter((post) => post.id !== postId);
-          this.filterPosts();
-          alert("Post deleted successfully.");
+          const post = this.posts.find(p => p.id === postId);
+          const url = post.isFound ? window.foundItemsUrl : window.lostItemsUrl;
+          await axios.delete(`${url}/${postId}`, {
+            headers: {
+              "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+            },
+          });
+          
+          // Remove post from both arrays
+          this.posts = this.posts.filter(post => post.id !== postId);
+          this.filteredPosts = this.filteredPosts.filter(post => post.id !== postId);
+          
+          alert("Post deleted successfully!");
         } catch (error) {
-          console.error("Error deleting post:", error.message);
+          console.error("Error deleting post:", error);
+          alert("Error deleting post: " + error.message);
         }
       }
+    },
+    enableLocationSelection() {
+      this.locationSelected = true;
     },
   },
 };
 </script>
-
-
-
-
-
-
 
 <style scoped>
 .dashboard {
@@ -437,10 +519,38 @@ export default {
 }
 
 .map-wrapper {
-  height: 780px;
+  position: relative;
+  width: 100%;
+  height: 750px;
   border-radius: 4px;
   overflow: hidden;
-  position: relative;
+  margin-bottom: 20px;
+}
+
+.location-status {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 5px 15px;
+  border-radius: 20px;
+  z-index: 99;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.map-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
 }
 
 .image-preview {
@@ -453,27 +563,51 @@ export default {
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
   margin-top: 20px;
-  padding: 15px 0;
-  background: white;
 }
 
-.btn {
-  padding: 8px 16px;
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.submit-btn {
+  background-color: #008080;
+  color: white;
   border: none;
+  padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
+  min-width: 100px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn.primary {
-  background: #008080;
-  color: white;
+.submit-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
-.btn.secondary {
-  background: #9e9e9e;
+.cancel-btn {
+  background-color: #6c757d;
   color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 10px;
 }
 
 .floating-btn {
@@ -515,5 +649,15 @@ export default {
   max-width: 90%;
   max-height: 90vh;
   object-fit: contain;
+}
+
+.add-location-btn {
+  background: #008080;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
 }
 </style>
