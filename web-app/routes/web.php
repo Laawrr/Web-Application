@@ -14,7 +14,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// User Routes
+
 Route::resource('users', UserController::class);
 Route::get('/user-id', [UserController::class, 'getID'])->name('user.id');
 // API route to log user activity
@@ -52,6 +52,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Add the newsfeed route here
+    Route::get('/newsfeed', function () {
+        return Inertia::render('NewsFeed'); // 'NewsFeed' is the Vue component name
+    })->middleware('auth'); // Add auth middleware if needed
 });
 
 // Admin Routes
@@ -63,14 +68,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/admin/reported-items', [AdminController::class, 'reportedItems'])->name('admin.reportedItems');
 });
 
-// Lost Items Routes
-// Route::resource('lost-items', LostItemController::class);
-Route::prefix('lost-items')->group(function () {
-    Route::get('/', [LostItemController::class, 'index'])->name('lost-items.index'); // List all lost items
-    Route::get('{id}', [LostItemController::class, 'show'])->name('lost-items.show'); // Display a specific lost item
-    Route::post('/', [LostItemController::class, 'store'])->name('lost-items.store'); // Store a new lost item
-    Route::put('{id}', [LostItemController::class, 'update'])->name('lost-items.update');// Update an existing lost item
-    Route::delete('{id}', [LostItemController::class, 'destroy'])->name('lost-items.destroy'); // Delete a lost item
+
+// Lost Items routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/lost-items', [LostItemController::class, 'index'])->name('lost-items.index');
+    Route::post('/lost-items', [LostItemController::class, 'store'])->name('lost-items.store');
 });
 
 // Found Items Routes
