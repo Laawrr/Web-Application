@@ -71,9 +71,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
 // Lost Items routes
-Route::middleware(['auth'])->group(function () {
-    Route::get('/lost-items', [LostItemController::class, 'index'])->name('lost-items.index');
-    Route::post('/lost-items', [LostItemController::class, 'store'])->name('lost-items.store');
+Route::prefix('lost-items')->group(function () {
+    Route::get('/', [lostItemController::class, 'index'])->name('lost-items.index'); // List all lost items
+    Route::get('{id}', [lostItemController::class, 'show'])->name('lost-items.show'); // Display a specific lost item
+    Route::post('/', [lostItemController::class, 'store'])->name('lost-items.store'); // Store a new lost item
+    Route::put('{id}', [lostItemController::class, 'update'])->name('lost-items.update'); // Update an existing lost item
+    Route::delete('{id}', [lostItemController::class, 'destroy'])->name('lost-items.destroy'); // Delete a lost item
 });
 
 // Found Items Routes
