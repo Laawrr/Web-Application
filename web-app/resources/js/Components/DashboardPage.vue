@@ -128,27 +128,43 @@ import axios from "axios";
 export default {
   components: { Map },
   data() {
-    return {
-      newItem: {
-        item_name: "",
-        status: "",
-        category: "",
-        lost_date: "",
+  return {
+    newItem: {
+      item_name: "",
+      status: "",
+      category: "",
+      lost_date: "",
+      found_date: "",
+      description: "",
+      facebook_link: "",
+      contact_number: "",
+      location: null,
+      image_url: null,
+      user_id: null,
+    },
+    posts: [
+      // Sample post to be displayed initially
+      {
+        id: 1,
+        item_name: "Lost Wallet",
+        status: "Lost",
+        category: "Wallets",
+        lost_date: "2024-12-18",
         found_date: "",
-        description: "",
-        facebook_link: "",
-        contact_number: "",
-        location: null,
-        image_url: null,
-        user_id: null,
+        description: "A black leather wallet with important cards and cash.",
+        facebook_link: "https://facebook.com/sample",
+        contact_number: "123-456-7890",
+        image_url: "https://via.placeholder.com/150",  // Replace with a valid image URL or placeholder
+        isFound: false,
       },
-      posts: [],
-      filteredPosts: [],
-      searchQuery: "",
-      showUploadForm: false,
-      enlargedImage: null,
-    };
-  },
+      // You can add more sample posts here if needed.
+    ],
+    filteredPosts: [],
+    searchQuery: "",
+    showUploadForm: false,
+    enlargedImage: null,
+  };
+},
   created() {
     this.fetchPosts();
     this.fetchUserId();
@@ -280,11 +296,6 @@ export default {
   },
 };
 </script>
-
-
-
-
-
 
 
 <style scoped>
