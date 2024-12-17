@@ -132,14 +132,15 @@ class FoundItemController extends Controller
      */
     public function destroy($id)
     {
-        $foundItem = FoundItem::findOrFail($id);
-
-        if ($foundItem->image_url && file_exists(public_path($foundItem->image_url))) {
-            unlink(public_path($foundItem->image_url));
-        }
-
+        $foundItem = FoundItem::find($id);
+        
+        $filePath = public_path('assets/img/'.$foundItem->image_url);
+        if (file_exists($filePath)) {
+            unlink($filePath); 
+        } 
+    
         $foundItem->delete();
-
+    
         return response()->json(null, 204);
     }
 }

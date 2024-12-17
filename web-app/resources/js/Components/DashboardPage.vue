@@ -266,7 +266,7 @@ export default {
         try {
           const post = this.posts.find((post) => post.id === postId);
           const endpoint =
-            post.status === "Found" ? `/found-items/${postId}` : `/lost-items/${postId}`;
+            post.isFound === true ? `/found-items/${postId}` : `/lost-items/${postId}`;
           await axios.delete(endpoint);
 
           this.posts = this.posts.filter((post) => post.id !== postId);
