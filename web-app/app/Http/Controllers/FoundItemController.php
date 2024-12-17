@@ -34,7 +34,7 @@ class FoundItemController extends Controller
             $image = $request->file('image_url');
             $filename = time() . '.' . $image->extension();
             $image->move(public_path('assets/img'), $filename);
-            $imageUrl = asset('assets/img/' . $filename);
+            $imageUrl = 'assets/img/' . $filename;
         }
 
         $request->validate([
@@ -132,9 +132,9 @@ class FoundItemController extends Controller
      */
     public function destroy($id)
     {
-        $foundItem = FoundItem::find($id);
+        $foundItem = FoundItem::findOrFail($id);
         
-        $filePath = public_path('assets/img/'.$foundItem->image_url);
+        $filePath = public_path($foundItem->image_url);
         if (file_exists($filePath)) {
             unlink($filePath); 
         } 

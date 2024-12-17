@@ -34,7 +34,7 @@ class LostItemController extends Controller
             $image = $request->file('image_url');
             $filename = time() . '.' . $image->extension();
             $image->move(public_path('assets/img'), $filename);
-            $imageUrl = asset('assets/img/' . $filename);
+            $imageUrl = 'assets/img/' . $filename;
         }
 
         $request->validate([
@@ -133,13 +133,14 @@ class LostItemController extends Controller
     public function destroy($id)
     {
         $lostItem = LostItem::findOrFail($id);
-
-        if ($lostItem->image_url && file_exists(public_path($lostItem->image_url))) {
-            unlink(public_path($lostItem->image_url));
-        }
-
+        
+        $filePath = public_path($lostItem->image_url);
+        if (file_exists($filePath)) {
+            unlink($filePath); 
+        } 
+    
         $lostItem->delete();
-
+    
         return response()->json(null, 204);
     }
 }
