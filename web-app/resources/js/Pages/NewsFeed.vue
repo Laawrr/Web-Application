@@ -18,7 +18,8 @@
 
       <!-- Lost items list -->
       <div v-else>
-        <div v-for="item in lostItems" :key="item.id" class="bg-white shadow-lg rounded-2xl mb-8 p-6 transition-all transform hover:scale-102 hover:shadow-2xl duration-300">
+        <div v-for="item in lostItems" :key="item.id"
+          class="bg-white shadow-lg rounded-2xl mb-8 p-6 transition-all transform hover:scale-102 hover:shadow-2xl duration-300">
 
           <!-- Post Header -->
           <div class="flex items-center space-x-4 mb-4">
@@ -42,12 +43,12 @@
 
             <!-- Comment Icon to trigger comment input -->
             <div class="flex items-center space-x-4 mb-4">
-              <button 
-                @click="toggleCommentSection(item.id)"
-                class="flex items-center space-x-2 text-blue-500 hover:text-blue-600"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 10-4 0 2 2 0 004 0zM19 19H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2z" />
+              <button @click="toggleCommentSection(item.id)"
+                class="flex items-center space-x-2 text-blue-500 hover:text-blue-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor"
+                  viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M21 15a2 2 0 10-4 0 2 2 0 004 0zM19 19H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2z" />
                 </svg>
                 <span class="text-sm">Comment</span>
               </button>
@@ -56,25 +57,19 @@
             <!-- Comment input form (toggle visibility based on click) -->
             <div v-if="item.showCommentSection" class="transition-all duration-500 ease-in-out mt-4">
               <div class="flex items-center space-x-4 mb-4">
-                <input 
-                  v-model="newComment" 
-                  type="text" 
-                  @input="onCommentInput(item.id)"
+                <input v-model="newComment" type="text" @input="onCommentInput(item.id)"
                   class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Add a comment..." 
-                />
-                <button 
-                  @click="submitComment(item.id)" 
-                  :disabled="newComment.trim() === ''"
-                  class="bg-blue-500 text-white p-2 rounded-lg disabled:opacity-50"
-                >
+                  placeholder="Add a comment..." />
+                <button @click="submitComment(item.id)" :disabled="newComment.trim() === ''"
+                  class="bg-blue-500 text-white p-2 rounded-lg disabled:opacity-50">
                   Post
                 </button>
               </div>
 
               <!-- List of comments -->
               <div class="space-y-2">
-                <div v-for="comment in item.comments" :key="comment.id" class="flex items-center space-x-2 bg-gray-100 p-2 rounded-lg">
+                <div v-for="comment in item.comments" :key="comment.id"
+                  class="flex items-center space-x-2 bg-gray-100 p-2 rounded-lg">
                   <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center">
                     <span class="font-semibold text-sm">U</span>
                   </div>
@@ -83,7 +78,7 @@
               </div>
             </div>
           </div>
-          
+
         </div>
       </div>
 
@@ -122,7 +117,6 @@ export default {
       }
     };
 
-    // Fetch posts for lost and found items
     const fetchPosts = async () => {
       try {
         // Fetch data from both endpoints simultaneously
@@ -137,6 +131,9 @@ export default {
 
         // Merge posts into a single array
         lostItems.value = [...lostPosts, ...foundPosts];
+
+        // Fetch comments for each item after posts are fetched
+        await fetchComments();
       } catch (error) {
         console.error('Error fetching posts:', error.message);
       } finally {
@@ -144,20 +141,42 @@ export default {
       }
     };
 
+    // Fetch comments for each post
+    const fetchComments = async () => {
+      try {
+        for (let item of lostItems.value) {
+          const response = await axios.get(`/comments?item_id=${item.id}`);
+          item.comments = response.data;
+        }
+      } catch (error) {
+        console.error('Error fetching comments:', error.message);
+      }
+    };
     // Toggle the visibility of the comment section
     const toggleCommentSection = (itemId) => {
       const item = lostItems.value.find(item => item.id === itemId);
       if (item) item.showCommentSection = !item.showCommentSection;
     };
 
-    // Submit a new comment
-    const submitComment = (itemId) => {
+    const submitComment = async (itemId, itemType) => {
       const commentText = newComment.value.trim();
       if (commentText !== '') {
-        const item = lostItems.value.find(item => item.id === itemId);
-        if (item) {
-          item.comments.push({ id: Date.now(), text: commentText });
-          newComment.value = ''; // Clear input
+        try {
+          // Send the comment to the backend
+          const response = await axios.post('/comments', {
+            item_id: itemId,
+            item_type: itemType, // Add the item_type to the request
+            text: commentText
+          });
+
+          // Find the item and add the new comment to the list
+          const item = lostItems.value.find(item => item.id === itemId);
+          if (item) {
+            item.comments.push(response.data.comment); // Add the newly created comment
+            newComment.value = ''; // Clear input
+          }
+        } catch (error) {
+          console.error('Error posting comment:', error.message);
         }
       }
     };
@@ -165,7 +184,15 @@ export default {
     // Format date helper
     const formatDate = (dateString) => {
       const date = new Date(dateString);
-      return date.toLocaleDateString();
+      const options = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      };
+      return date.toLocaleString(undefined, options);
     };
 
     // On mount, fetch user ID and posts
