@@ -2,26 +2,27 @@
 import '../css/app.css';
 import './bootstrap';
 
+import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
 // Import Vue Router
-import { createRouter, createWebHistory } from 'vue-router'; // Add this line
+import { createRouter, createWebHistory } from 'vue-router'; 
 
 // Import Vuetify for Vue 3
 import { createVuetify } from 'vuetify';
-import 'vuetify/styles'; // Vuetify styles
-import * as components from 'vuetify/components'; // Import Vuetify components
-import * as directives from 'vuetify/directives'; // Import Vuetify directives
+import 'vuetify/styles'; 
+import * as components from 'vuetify/components'; 
+import * as directives from 'vuetify/directives'; 
 
 // Import Font Awesome library
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPenToSquare, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPenToSquare, faTrash, faSquare, faSquareCheck } from '@fortawesome/free-solid-svg-icons';
+import { faSquare as faSquareRegular } from '@fortawesome/free-regular-svg-icons';
 
-library.add(faPenToSquare, faTrash);
+library.add(faPenToSquare, faTrash, faSquareRegular, faSquareCheck);
 
 // Create Vuetify instance
 const vuetify = createVuetify({
@@ -31,25 +32,22 @@ const vuetify = createVuetify({
 
 // Create the router instance
 const router = createRouter({
-    history: createWebHistory(), // Use HTML5 history mode
+    history: createWebHistory(), 
     routes: [
         {
             path: '/admin',
+            name: 'admin',
             component: () => import('./Pages/Admin.vue'),
-            children: [
-                {
-                    path: 'users',
-                    component: () => import('./Components/UsersView.vue'),
-                },
-                {
-                    path: 'users-log',
-                    component: () => import('./Components/UsersLog.vue'),
-                },
-                {
-                    path: 'reported-items',
-                    component: () => import('./Components/ReportedItems.vue'),
-                },
-            ],
+        },
+        {
+            path: '/dashboard',
+            name: 'dashboard',
+            component: () => import('./Pages/Dashboard.vue'),
+        },
+        {
+            path: '/profile',
+            name: 'profile',
+            component: () => import('./Pages/Profile/Edit.vue'),
         },
     ],
 });
@@ -68,9 +66,9 @@ createInertiaApp({
 
         app.use(plugin);
         app.use(ZiggyVue);
-        app.use(vuetify); // Add Vuetify instance here
-        app.use(router); // Add the router instance here
-        app.component('font-awesome-icon', FontAwesomeIcon); // Add Font Awesome component
+        app.use(vuetify); 
+        app.use(router); 
+        app.component('font-awesome-icon', FontAwesomeIcon); 
 
         app.mount(el);
     },
@@ -81,14 +79,14 @@ createInertiaApp({
 
 // --------- Backend / Express Setup ---------
 const express = require('express'); 
-const lostItemsRoute = require('./routes/lostItems'); // Import your route file for lost items
+const lostItemsRoute = require('./routes/lostItems'); 
 const app = express();
 
 // Middleware to parse incoming JSON requests
 app.use(express.json());
 
 // Use the routes from the lostItems.js file
-app.use('/api', lostItemsRoute); // All routes in lostItems.js will be prefixed with /api
+app.use('/api', lostItemsRoute); 
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

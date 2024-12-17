@@ -38,6 +38,7 @@ const goToLogin = () => {
                         <InputLabel for="name" value="Name" />
                         <TextInput
                             id="name"
+                            placeholder="Enter your name"
                             type="text"
                             class="mt-1 block w-full"
                             v-model="form.name"
@@ -53,6 +54,7 @@ const goToLogin = () => {
                         <TextInput
                             id="email"
                             type="email"
+                            placeholder="Enter your email"
                             class="mt-1 block w-full"
                             v-model="form.email"
                             required
@@ -66,6 +68,7 @@ const goToLogin = () => {
                         <TextInput
                             id="password"
                             type="password"
+                            placeholder="Enter your password"
                             class="mt-1 block w-full"
                             v-model="form.password"
                             required
@@ -79,6 +82,7 @@ const goToLogin = () => {
                         <TextInput
                             id="password_confirmation"
                             type="password"
+                            placeholder="Confirm your password"
                             class="mt-1 block w-full"
                             v-model="form.password_confirmation"
                             required

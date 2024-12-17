@@ -15,7 +15,7 @@
 
     <!-- Notification Dropdown -->
     <div 
-      v-if="isOpen" 
+      v-if="showDropdown" 
       class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg overflow-hidden z-50"
     >
       <div class="py-2">
@@ -61,14 +61,27 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
-const isOpen = ref(false);
+const showDropdown = ref(false);
 const unreadCount = ref(0);
 const notifications = ref([]);
 
-// Toggle the dropdown visibility
-const toggleDropdown = () => {
-  isOpen.value = !isOpen.value;
+// Method to close dropdown
+const closeDropdown = () => {
+    showDropdown.value = false;
 };
+
+// Toggle dropdown and emit event
+const toggleDropdown = () => {
+    showDropdown.value = !showDropdown.value;
+    emit('dropdown-toggled', showDropdown.value);
+};
+
+// Expose methods to parent
+defineExpose({
+    closeDropdown
+});
+
+const emit = defineEmits(['dropdown-toggled']);
 
 // Fetch notifications from the server
 const fetchNotifications = async () => {

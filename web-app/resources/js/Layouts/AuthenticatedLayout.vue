@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
@@ -8,6 +8,23 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
+const showProfileMenu = ref(false);
+
+// Close dropdown when clicking outside
+const closeDropdown = (e) => {
+    if (!e.target.closest('.profile-dropdown')) {
+        showProfileMenu.value = false;
+    }
+};
+
+// Add click outside listener
+onMounted(() => {
+    document.addEventListener('click', closeDropdown);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', closeDropdown);
+});
 </script>
 
 <template>
@@ -22,64 +39,44 @@ const showingNavigationDropdown = ref(false);
                         <div class="flex">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
+                                <Link href="/">
                                     <ApplicationLogo
                                         class="block h-9 w-auto fill-current text-gray-800"
                                     />
                                 </Link>
                             </div>
-
-                            <!-- Navigation Links -->
-                            <div
-                                class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
-                            >
-                                <NavLink
-                                    :href="route('dashboard')"
-                                    :active="route().current('dashboard')"
-                                >
-                                    Dashboard
-                                </NavLink>
-                            </div>
                         </div>
 
-                        <div class="hidden sm:ms-6 sm:flex sm:items-center">
-                            <!-- Settings Dropdown -->
-                            <div class="relative ms-3">
-                                <Dropdown align="right" width="48">
-                                    <template #trigger>
-                                        <span class="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                                            >
-                                                {{ $page.props.auth.user.name }}
+                        <div class="hidden sm:flex sm:items-center sm:space-x-6">
+                            <!-- Navigation Links -->
+                            <NavLink href="/" :active="$page.url === '/'">
+                                Homepage
+                            </NavLink>
+                            <NavLink href="/dashboard" :active="$page.url === '/dashboard'">
+                                Dashboard
+                            </NavLink>
 
-                                                <svg
-                                                    class="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fill-rule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clip-rule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </template>
+                            <!-- Profile Dropdown -->
+                            <div class="relative profile-dropdown">
+                                <button @click="showProfileMenu = !showProfileMenu" 
+                                    class="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center hover:bg-teal-600 transition-colors">
+                                    {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
+                                </button>
 
-                                    <template #content>
-                                        <DropdownLink
-                                            :href="route('logout')"
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Log Out
-                                        </DropdownLink>
-                                    </template>
-                                </Dropdown>
+                                <!-- Dropdown Menu -->
+                                <div v-if="showProfileMenu" 
+                                    class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                                    <Link :href="route('profile.edit')" 
+                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Edit Profile
+                                    </Link>
+                                    <Link :href="route('logout')" 
+                                        method="post" 
+                                        as="button"
+                                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Log Out
+                                    </Link>
+                                </div>
                             </div>
                         </div>
 
@@ -136,10 +133,10 @@ const showingNavigationDropdown = ref(false);
                 >
                     <div class="space-y-1 pb-3 pt-2">
                         <ResponsiveNavLink
-                            :href="route('dashboard')"
-                            :active="route().current('dashboard')"
+                            href="/"
+                            :active="$page.url === '/'"
                         >
-                            Dashboard
+                            Homepage
                         </ResponsiveNavLink>
                     </div>
 
@@ -160,7 +157,7 @@ const showingNavigationDropdown = ref(false);
 
                         <div class="mt-3 space-y-1">
                             <ResponsiveNavLink :href="route('profile.edit')">
-                                Profile
+                                Edit Profile
                             </ResponsiveNavLink>
                             <ResponsiveNavLink
                                 :href="route('logout')"
