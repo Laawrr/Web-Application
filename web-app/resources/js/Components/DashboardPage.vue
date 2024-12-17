@@ -100,8 +100,8 @@
                   <div class="map-wrapper">
                     <div class="map-area">
                       <div class="map-container" :class="{ enabled: mapEnabled }">
+                        <Map ref="mapComponent" @location-selected="updateLocation" :disabled="false" />
                         <div class="map-blur-overlay" :class="{ enabled: mapEnabled }"></div>
-                        <Map ref="mapComponent" @location-selected="updateLocation" :disabled="!locationSelected" />
                       </div>
                       <div class="map-controls">
                         <div class="map-overlay" v-if="!locationSelected">
@@ -110,7 +110,7 @@
                             Add Location (Click to Enable Map)
                           </button>
                         </div>
-                        <div v-if="locationSelected" class="location-status">
+                        <div v-if="locationSelected" class="location-status" style="margin-bottom: 340px">
                           <span v-if="newItem.location">Location selected ✓</span>
                           <span v-else>Click on the map to place a pin</span>
                         </div>
@@ -578,6 +578,10 @@ export default {
   height: 100%;
 }
 
+.map-container.enabled {
+  z-index: 2;
+}
+
 .map-blur-overlay {
   position: absolute;
   top: 0;
@@ -588,13 +592,14 @@ export default {
   height: 100%;
   backdrop-filter: blur(8px);
   background: rgba(255, 255, 255, 0.5);
-  z-index: 1;
+  z-index: 3;
   transition: all 0.3s ease;
 }
 
 .map-blur-overlay.enabled {
   opacity: 0;
   pointer-events: none;
+  z-index: 1;
 }
 
 .map-controls {
@@ -603,7 +608,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 2;
+  z-index: 4;
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -614,6 +619,14 @@ export default {
 
 .map-overlay {
   pointer-events: auto;
+}
+
+.location-status {
+  pointer-events: auto;
+  background: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .add-location-btn {
@@ -632,14 +645,6 @@ export default {
 
 .add-location-btn:hover {
   background-color: #45a399;
-}
-
-.location-status {
-  background: white;
-  padding: 8px 16px;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  pointer-events: auto;
 }
 
 .image-preview {
