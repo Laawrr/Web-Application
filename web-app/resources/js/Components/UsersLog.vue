@@ -8,30 +8,28 @@
         :loading="loading"
         :items-per-page="10"
         class="elevation-1"
-        v-model:page="page"
       >
         <template v-slot:top>
-          <div class="pa-4">
-            <div class="text-h5 mb-4">Users Activity Log</div>
+          <v-card-title class="d-flex justify-space-between align-center">
+            <div>Users Activity Log</div>
             <v-text-field
               v-model="search"
               append-icon="mdi-magnify"
               label="Search"
               single-line
               hide-details
+              class="ml-2"
               style="max-width: 300px;"
             ></v-text-field>
-          </div>
+          </v-card-title>
         </template>
 
-        <template v-slot:header.user.name>
-          <span class="font-weight-black">User</span>
-        </template>
-        <template v-slot:header.action>
-          <span class="font-weight-black">Action</span>
-        </template>
-        <template v-slot:header.action_time>
-          <span class="font-weight-black">Time</span>
+        <template v-slot:header="{ props }">
+          <tr>
+            <th class="text-left">User</th>
+            <th class="text-left">Action</th>
+            <th class="text-left">Time</th>
+          </tr>
         </template>
 
         <template v-slot:item="{ item }">
@@ -48,28 +46,6 @@
             height="2"
             indeterminate
           ></v-progress-linear>
-        </template>
-
-        <template v-slot:bottom>
-          <div class="d-flex align-center justify-center pa-4 gap-4">
-            <v-btn
-              style="background-color: #4fb9af; color: white"
-              variant="flat"
-              :disabled="page === 1"
-              @click="page--"
-            >
-              Previous
-            </v-btn>
-            <span>Page {{ page }} of {{ Math.ceil(logs.length / 10) }}</span>
-            <v-btn
-              style="background-color: #4fb9af; color: white"
-              variant="flat"
-              :disabled="page >= Math.ceil(logs.length / 10)"
-              @click="page++"
-            >
-              Next
-            </v-btn>
-          </div>
         </template>
       </v-data-table>
     </v-card>
@@ -111,7 +87,6 @@ export default {
       ],
       logs: [],
       loading: true,
-      page: 1,
     };
   },
   created() {
@@ -155,32 +130,25 @@ export default {
   border-radius: 0 0 4px 4px;
 }
 
-:deep(.v-data-table-header) {
-  background-color: #f5f5f5 !important;
-}
-
 :deep(.v-data-table-header th) {
   color: black !important;
-  font-weight: 700 !important;
-  font-size: 14px !important;
+  font-weight: bold !important;
+  font-size: 1rem !important;
   text-transform: none !important;
-  letter-spacing: 0 !important;
+  background-color: #f5f5f5 !important;
   padding: 12px 16px !important;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.12) !important;
 }
 
 :deep(.v-data-table tbody td) {
-  color: rgba(0, 0, 0, 0.87) !important;
-  padding: 8px 16px !important;
-}
-
-.text-h5 {
-  color: rgba(0, 0, 0, 0.87);
-  font-weight: 500;
-}
-
-.font-weight-black {
-  font-weight: 900 !important;
   color: black !important;
+  padding: 12px 16px !important;
+}
+
+:deep(.v-data-table tbody tr:nth-child(even)) {
+  background-color: #f9f9f9;
+}
+
+:deep(.v-data-table tbody tr:hover) {
+  background-color: #f0f0f0;
 }
 </style>
