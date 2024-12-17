@@ -123,6 +123,8 @@ export default {
       axios.get('/admin/users-log')
         .then(response => {
           this.logs = response.data.activityLog;
+          // Sort logs by action_time in descending order
+          this.logs.sort((a, b) => new Date(b.action_time) - new Date(a.action_time));
         })
         .catch(error => {
           console.error('Error fetching activity logs:', error);
