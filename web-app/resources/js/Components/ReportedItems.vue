@@ -25,6 +25,41 @@
         class="elevation-1"
         v-model:page="page"
       >
+        <template v-slot:header.item_name>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">Item Name</div>
+            <div class="text-caption text-grey">Name of reported item</div>
+          </div>
+        </template>
+
+        <template v-slot:header.user.name>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">Reporter</div>
+            <div class="text-caption text-grey">Person who reported</div>
+          </div>
+        </template>
+
+        <template v-slot:header.status>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">Status</div>
+            <div class="text-caption text-grey">Current state</div>
+          </div>
+        </template>
+
+        <template v-slot:header.type>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">Type</div>
+            <div class="text-caption text-grey">Item category</div>
+          </div>
+        </template>
+
+        <template v-slot:header.created_at>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">Date</div>
+            <div class="text-caption text-grey">When reported</div>
+          </div>
+        </template>
+
         <template v-slot:progress>
           <v-progress-linear
             color="#4fb9af"

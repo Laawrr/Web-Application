@@ -40,6 +40,40 @@
             indeterminate
           ></v-progress-linear>
         </template>
+        <template v-slot:header.name>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">Name</div>
+            <div class="text-caption text-grey">User's full name</div>
+          </div>
+        </template>
+
+        <template v-slot:header.email>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">Email</div>
+            <div class="text-caption text-grey">Contact email</div>
+          </div>
+        </template>
+
+        <template v-slot:header.role>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">Role</div>
+            <div class="text-caption text-grey">User access level</div>
+          </div>
+        </template>
+
+        <template v-slot:header.created_at>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">Created</div>
+            <div class="text-caption text-grey">Account creation date</div>
+          </div>
+        </template>
+
+        <template v-slot:header.actions>
+          <div>
+            <div class="text-subtitle-2 font-weight-bold">Actions</div>
+            <div class="text-caption text-grey">Available operations</div>
+          </div>
+        </template>
         <template v-slot:item.actions="{ item }">
           <div class="d-flex align-center">
             <font-awesome-icon
