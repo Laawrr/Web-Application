@@ -82,6 +82,12 @@ Route::prefix('lost-items')->group(function () {
     Route::delete('{id}', [lostItemController::class, 'destroy'])->name('lost-items.destroy'); // Delete a lost item
 });
 
+
+Route::prefix('comments')->group(function () {
+    Route::get('/{item_type}/{item_id}', [CommentController::class, 'index'])->name('comments.index');
+    Route::post('/', [CommentController::class, 'store'])->name('comments.store');
+});
+
 // Found Items Routes
 // Route::resource('found-items', FoundItemController::class);
 Route::prefix('found-items')->group(function () {

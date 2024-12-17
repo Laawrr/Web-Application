@@ -6,36 +6,35 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
     use HasFactory;
 
-    protected $keyType = 'string';  // For UUID as primary key
-    protected $primaryKey = 'id';   // Specify the primary key
-
+    // The attributes that are mass assignable
     protected $fillable = [
         'type',
-        'notifiable_type',
-        'notifiable_id',
         'data',
         'read_at',
         'user_id',
     ];
 
+    // The attributes that should be cast to native types
     protected $casts = [
-        'data' => 'array',  // Automatically cast 'data' field to an array
-        'read_at' => 'datetime',  // Automatically cast 'read_at' field to a datetime
+        'data' => 'array',
+        'read_at' => 'datetime',
     ];
 
-    // Polymorphic relation: this allows the notification to be related to various other models
-    public function notifiable()
+    // Define a polymorphic relationship with the notifiable model
+    public function notifiable(): MorphTo
     {
         return $this->morphTo();
     }
 
-    // Relationship to User model (notification belongs to user)
-    public function user()
+    // Define a relationship with the user who will receive the notification
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
