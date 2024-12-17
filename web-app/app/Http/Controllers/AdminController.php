@@ -37,15 +37,17 @@ class AdminController extends Controller
 
     public function users()
     {
+        $users = User::all();
+
         return response()->json([
-            'users' => User::all()
+            'users' => $users,
         ]);
     }
 
     public function usersLog()
     {
         $activityLog = ActivityLog::with('user:id,name')->get();
-        // Add your user log retrieval logic here
+
         return response()->json([
             'activityLog' => $activityLog,
         ]);
@@ -53,20 +55,24 @@ class AdminController extends Controller
 
     public function reportedItems()
     {
-        // Add your reported items retrieval logic here
+        $lostItems = LostItem::with('user:id,name', 'claim:claim_id,claim_status')->get();
+        $foundItems = FoundItem::with('user:id,name', 'claim:claim_id,claim_status')->get();
+
         return response()->json([
-            'items' => []
+            'lostItems' => $lostItems,
+            'foundItems' => $foundItems,
         ]);
     }
 
-    // Add the getID method here for the authenticated admin user
+
+
     public function getID()
     {
-        $user = Auth::user(); // Get the currently authenticated user (admin or regular user)
+        $user = Auth::user(); 
 
         return response()->json([
-            'id' => $user->id, // Return the user's ID
-            'last_login_at' => $user->last_login_at, // Return the user's last login time
+            'id' => $user->id, 
+            'last_login_at' => $user->last_login_at, 
         ]);
     }
 }

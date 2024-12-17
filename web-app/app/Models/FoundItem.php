@@ -20,4 +20,8 @@ class FoundItem extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function claim()
+    {
+        return $this->hasOne(Claim::class, 'found_item_id');
+    }
 }

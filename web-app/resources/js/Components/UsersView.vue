@@ -2,7 +2,7 @@
   <v-container class="pa-6">
     <v-card class="mx-auto" max-width="1500">
       <v-card-title class="headline">
-        User Activity Log
+        Users Management
         <v-spacer></v-spacer>
         <v-text-field
           v-model="search"
@@ -17,10 +17,14 @@
       <v-divider></v-divider>
       <v-data-table
         :headers="headers"
-        :items="logs"
+        :items="filteredUsers"
         :search="search"
         class="elevation-1"
-      ></v-data-table>
+      >
+        <template v-slot:item.created_at="{ item }">
+          <td>{{ formatDate(item.created_at) }}</td>
+        </template>
+      </v-data-table>
     </v-card>
   </v-container>
 </template>
@@ -29,30 +33,50 @@
 import axios from 'axios';
 
 export default {
-  name: 'UsersLog',
+  name: 'UsersView',
   data() {
     return {
       search: '',
       headers: [
-        { text: 'Name', value: 'user.name', width: '20%' }, 
-        { text: 'Action', value: 'action', width: '20%' },
-        { text: 'Time', value: 'action_time', width: '20%' },
+        { text: 'Name', value: 'name', width: '25%' },
+        { text: 'Email', value: 'email', width: '30%' },
+        { text: 'Role', value: 'role', width: '15%' },
+        { text: 'Date-created', value: 'created_at', width: '15%' },
       ],
-      logs: [],
+      users: [],
     };
   },
+
+  computed: {
+    // Filter users based on search query
+    filteredUsers() {
+      return this.users.filter(user =>
+        user.name.toLowerCase().includes(this.search.toLowerCase()) ||
+        user.email.toLowerCase().includes(this.search.toLowerCase())
+      );
+    },
+  },
+
   created() {
     this.fetchLogs();
   },
+
   methods: {
     fetchLogs() {
-      axios.get('/admin/users-log') 
+      axios.get('/admin/users')
         .then(response => {
-          this.logs = response.data.activityLog;
+          this.users = response.data.users; // Assuming 'users' is the correct key
         })
         .catch(error => {
-          console.error('Error fetching activity logs:', error);
+          console.error('Error fetching users:', error);
         });
+    },
+
+    // Method to format date in a readable format
+    formatDate(dateString) {
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', options); // Adjust locale if needed
     },
   },
 };

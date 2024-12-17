@@ -67,8 +67,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
     Route::get('/admin/users-log', [AdminController::class, 'usersLog'])->name('admin.usersLog');
     Route::get('/admin/reported-items', [AdminController::class, 'reportedItems'])->name('admin.reportedItems');
+    Route::post('/admin/users', [AdminController::class, 'createUser']);
+    Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
+    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
 });
-
 
 // Lost Items routes
 Route::prefix('lost-items')->group(function () {

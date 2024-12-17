@@ -32,36 +32,20 @@
       </v-col>
     </v-row>
 
-    <!-- User Activity Section -->
+    <!-- Pie Chart -->
     <v-row>
-      <v-col cols="12">
-        <v-card class="user-card" outlined>
-          <v-card-title>Notifications</v-card-title>
-          <v-card-subtitle>Howdy, {{ user.name }}!</v-card-subtitle>
-          <v-card-text>
-            Last login: {{ lastLogin }} from <strong>{{ ipAddress }}</strong>
-          </v-card-text>
-          <v-chip color="primary" text-color="white">{{ userStatus }}</v-chip>
+      <v-col cols="12" sm="6">
+        <v-card outlined>
+          <v-card-title>Item Statistics</v-card-title>
+          <pie-chart ref="pieChart" :data="pieChartData" />
         </v-card>
       </v-col>
-    </v-row>
 
-    <!-- Activity List -->
-    <v-row>
-      <v-col cols="12" sm="4" v-for="(activity, index) in activities" :key="index">
-        <v-card class="activity-card" outlined>
-          <v-list-item>
-            <v-list-item-avatar color="secondary">
-              <v-icon>mdi-account-circle</v-icon>
-            </v-list-item-avatar>
-            <v-list-item-content>
-              <v-list-item-title>{{ activity.name }}</v-list-item-title>
-              <v-list-item-subtitle>{{ activity.date }}</v-list-item-subtitle>
-            </v-list-item-content>
-            <v-chip :color="activity.statusColor" dark>
-              {{ activity.status }}
-            </v-chip>
-          </v-list-item>
+      <!-- Bar Graph -->
+      <v-col cols="12" sm="6">
+        <v-card outlined>
+          <v-card-title>Item Overview</v-card-title>
+          <bar-chart ref="barChart" :data="barChartData" />
         </v-card>
       </v-col>
     </v-row>
@@ -69,38 +53,97 @@
 </template>
 
 <script>
+import { Pie, Bar } from 'vue-chartjs';
+import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement } from 'chart.js';
+
+ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
+
 export default {
   name: 'Dashboard',
+  components: {
+    PieChart: Pie,
+    BarChart: Bar
+  },
   data() {
     return {
       stats: {
-        totalUsers: 512,
-        lostItems: 7770,
-        foundItems: 256,
-        claims: 24,
+        totalUsers: 1,
+        lostItems: 2,
+        foundItems: 1,
+        claims: 0,
       },
-      user: {
-        name: 'John Doe'
+      pieChartData: {
+        labels: ['Lost Items', 'Found Items', 'Claims'],
+        datasets: [{
+          label: 'Item Statistics',
+          data: [2, 1, 0],
+          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
+          hoverOffset: 4
+        }]
       },
-      lastLogin: '12 mins ago',
-      ipAddress: '127.0.0.1',
-      userStatus: 'Verified',
-      activities: [
-        { name: "Howell Hand", date: "Mar 3, 2021", status: "+70%", statusColor: "primary" },
-        { name: "Hope Howe", date: "Dec 1, 2021", status: "+82%", statusColor: "secondary" },
-        { name: "Nelson Jerde", date: "May 18, 2021", status: "-40%", statusColor: "coral" },
-      ],
-    }
+      barChartData: {
+        labels: ['Lost Items', 'Found Items', 'Claims'],
+        datasets: [{
+          label: 'Item Overview',
+          data: [2, 1, 0],
+          backgroundColor: '#42A5F5',
+          borderColor: '#1E88E5',
+          borderWidth: 1
+        }]
+      }
+    };
   },
   mounted() {
     this.fetchDashboardData();
+  },
+  watch: {
+    stats: {
+      handler(newStats) {
+        console.log('Stats updated:', newStats);
+        this.pieChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
+        this.barChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
+        this.$nextTick(() => {
+          this.$refs.pieChart.chart.update();
+          this.$refs.barChart.chart.update();
+        });
+      },
+      deep: true
+    },
+    pieChartData: {
+      handler(newData) {
+        console.log('Pie chart data updated:', newData);
+      },
+      deep: true
+    },
+    barChartData: {
+      handler(newData) {
+        console.log('Bar chart data updated:', newData);
+      },
+      deep: true
+    }
   },
   methods: {
     async fetchDashboardData() {
       try {
         const response = await fetch('/admin/dashboard');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
-        this.stats = data;
+        
+        this.stats = {
+          totalUsers: data.totalUsers,
+          lostItems: data.lostItems,
+          foundItems: data.foundItems,
+          claims: data.claims,
+        };
+        this.pieChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
+        this.barChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
+        
+        this.$nextTick(() => {
+          this.$refs.pieChart.chart.update();
+          this.$refs.barChart.chart.update();
+        });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }

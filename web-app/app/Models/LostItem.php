@@ -20,4 +20,9 @@ class LostItem extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function claim()
+    {
+        return $this->hasOne(Claim::class, 'lost_item_id');
+    }
 }
