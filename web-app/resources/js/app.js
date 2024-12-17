@@ -16,6 +16,13 @@ import 'vuetify/styles'; // Vuetify styles
 import * as components from 'vuetify/components'; // Import Vuetify components
 import * as directives from 'vuetify/directives'; // Import Vuetify directives
 
+// Import Font Awesome library
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faPenToSquare, faTrash } from '@fortawesome/free-solid-svg-icons';
+
+library.add(faPenToSquare, faTrash);
+
 // Create Vuetify instance
 const vuetify = createVuetify({
     components,
@@ -63,6 +70,7 @@ createInertiaApp({
         app.use(ZiggyVue);
         app.use(vuetify); // Add Vuetify instance here
         app.use(router); // Add the router instance here
+        app.component('font-awesome-icon', FontAwesomeIcon); // Add Font Awesome component
 
         app.mount(el);
     },
