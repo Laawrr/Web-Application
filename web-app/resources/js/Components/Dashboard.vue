@@ -25,8 +25,8 @@
       </v-col>
       <v-col cols="12" sm="3">
         <v-card class="card-overview" outlined>
-          <v-card-title>Alerts</v-card-title>
-          <v-card-text class="stat-value">{{ stats.alerts }}</v-card-text>
+          <v-card-title>Total Claims</v-card-title>
+          <v-card-text class="stat-value">{{ stats.claims }}</v-card-text>
           <v-icon color="white" large>mdi-bell</v-icon>
         </v-card>
       </v-col>
@@ -77,7 +77,7 @@ export default {
         totalUsers: 512,
         lostItems: 7770,
         foundItems: 256,
-        alerts: 24
+        claims: 24,
       },
       user: {
         name: 'John Doe'

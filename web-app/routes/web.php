@@ -9,6 +9,7 @@ use App\Http\Controllers\FoundItemController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\MarkerController;
+use App\Http\Controllers\SessionController;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -83,7 +84,7 @@ Route::prefix('found-items')->group(function () {
     Route::delete('{id}', [FoundItemController::class, 'destroy'])->name('found-items.destroy'); // Delete a found item
 });
 
-// Markers Routes
-Route::resource('markers', MarkerController::class);
+Route::get('/session', [SessionController::class, 'show']); // To view session details
+Route::delete('/session', [SessionController::class, 'destroy']); // To destroy session
 
 require __DIR__.'/auth.php';

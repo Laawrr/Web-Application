@@ -2,7 +2,7 @@
   <v-container class="pa-6">
     <v-card class="mx-auto" max-width="1500">
       <v-card-title class="headline">
-        Users Management
+        User Activity Log
         <v-spacer></v-spacer>
         <v-text-field
           v-model="search"
@@ -17,7 +17,7 @@
       <v-divider></v-divider>
       <v-data-table
         :headers="headers"
-        :items="users"
+        :items="logs"
         :search="search"
         class="elevation-1"
       ></v-data-table>
@@ -26,25 +26,36 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
-  name: 'UsersView',
+  name: 'UsersLog',
   data() {
     return {
       search: '',
       headers: [
-        { text: 'Name', value: 'name', width: '25%' },
-        { text: 'Email', value: 'email', width: '30%' },
-        { text: 'Role', value: 'role', width: '15%' },
-        { text: 'Status', value: 'status', width: '15%' },
-        { text: 'Actions', value: 'actions', width: '15%' },
+        { text: 'Name', value: 'user.name', width: '20%' }, 
+        { text: 'Action', value: 'action', width: '20%' },
+        { text: 'Time', value: 'action_time', width: '20%' },
       ],
-      users: [
-        { name: 'John Doe', email: 'john@example.com', role: 'Admin', status: 'Active' },
-        { name: 'Jane Smith', email: 'jane@example.com', role: 'User', status: 'Active' },
-      ],
-    }
+      logs: [],
+    };
   },
-}
+  created() {
+    this.fetchLogs();
+  },
+  methods: {
+    fetchLogs() {
+      axios.get('/admin/users-log') 
+        .then(response => {
+          this.logs = response.data.activityLog;
+        })
+        .catch(error => {
+          console.error('Error fetching activity logs:', error);
+        });
+    },
+  },
+};
 </script>
 
 <style scoped>
