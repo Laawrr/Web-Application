@@ -8,6 +8,7 @@
         :loading="loading"
         :items-per-page="10"
         class="elevation-1"
+        v-model:page="page"
       >
         <template v-slot:top>
           <div class="pa-4">
@@ -50,6 +51,28 @@
             indeterminate
           ></v-progress-linear>
         </template>
+
+        <template v-slot:bottom>
+          <div class="d-flex align-center justify-center pa-4 gap-4">
+            <v-btn
+              style="background-color: #4fb9af; color: white"
+              variant="flat"
+              :disabled="page === 1"
+              @click="page--"
+            >
+              Previous
+            </v-btn>
+            <span>Page {{ page }} of {{ Math.ceil(logs.length / 10) }}</span>
+            <v-btn
+              style="background-color: #4fb9af; color: white"
+              variant="flat"
+              :disabled="page >= Math.ceil(logs.length / 10)"
+              @click="page++"
+            >
+              Next
+            </v-btn>
+          </div>
+        </template>
       </v-data-table>
     </v-card>
   </v-container>
@@ -90,6 +113,7 @@ export default {
       ],
       logs: [],
       loading: true,
+      page: 1,
     };
   },
   created() {
