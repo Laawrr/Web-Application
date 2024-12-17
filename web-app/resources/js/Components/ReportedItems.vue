@@ -38,9 +38,6 @@
         <template v-slot:header.user.name>
           <span class="font-weight-black">Reporter</span>
         </template>
-        <template v-slot:header.status>
-          <span class="font-weight-black">Status</span>
-        </template>
         <template v-slot:header.type>
           <span class="font-weight-black">Type</span>
         </template>
@@ -98,13 +95,6 @@ export default {
           align: 'start',
           sortable: true,
           filterable: true,
-        },
-        { 
-          text: 'Status',
-          value: 'status',
-          width: '15%',
-          align: 'start',
-          sortable: true,
         },
         { 
           text: 'Type',
