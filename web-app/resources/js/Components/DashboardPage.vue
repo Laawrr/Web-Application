@@ -87,7 +87,7 @@
                   </div>
                   <div class="form-group">
                     <label for="contactNumber">Contact Number</label>
-                    <input type="tel" id="contactNumber" v-model="newItem.contact_number" required />
+                    <input type="number" id="contactNumber" v-model="newItem.contact_number" required />
                   </div>
                   <div class="form-group">
                     <label for="itemImage">Upload Image</label>
@@ -222,7 +222,7 @@ export default {
       const file = event.target.files[0];
       if (file) {
         this.newItem.image_file = file;
-        
+
         // Create a preview URL
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -256,16 +256,16 @@ export default {
         this.showError("Please select a location on the map first");
         return;
       }
-      
+
       this.isSubmitting = true;
       try {
         const formData = new FormData();
-        
+
         // Handle the image file
         if (this.newItem.image_file) {
-          formData.append('image_url', this.newItem.image_file); 
+          formData.append('image_url', this.newItem.image_file);
         }
-        
+
         // Handle all other form fields
         const formFields = {
           item_name: this.newItem.item_name,
@@ -287,7 +287,7 @@ export default {
         } else {
           formFields.found_date = this.newItem.found_date;
         }
-        
+
         // Append all form fields
         Object.keys(formFields).forEach(key => {
           if (formFields[key] !== null && formFields[key] !== undefined) {
@@ -297,7 +297,7 @@ export default {
 
         // Get CSRF token from meta tag
         const token = document.head.querySelector('meta[name="csrf-token"]');
-        
+
         if (!token) {
           this.showError("CSRF token not found. Please refresh the page.");
           return;
@@ -319,9 +319,9 @@ export default {
 
         this.showSuccess("Post created successfully!");
         this.closeUploadForm();
-        await this.fetchPosts(); 
+        await this.fetchPosts();
       } catch (error) {
-        console.error('Form Data:', this.newItem); 
+        console.error('Form Data:', this.newItem);
         if (error.response && error.response.status === 422) {
           // Handle validation errors
           const validationErrors = error.response.data.errors;
@@ -336,7 +336,7 @@ export default {
         this.isSubmitting = false;
       }
     },
-    
+
     showError(message) {
       // Replace alert with a more user-friendly error display
       const errorLines = message.split('\n');
@@ -368,11 +368,11 @@ export default {
               "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
             },
           });
-          
+
           // Remove post from both arrays
           this.posts = this.posts.filter(post => post.id !== postId);
           this.filteredPosts = this.filteredPosts.filter(post => post.id !== postId);
-          
+
           alert("Post deleted successfully!");
         } catch (error) {
           console.error("Error deleting post:", error);

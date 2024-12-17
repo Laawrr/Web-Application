@@ -42,25 +42,24 @@ export default {
   props: {
     disabled: {
       type: Boolean,
-      default: false,
+      default: true,
     },
   },
   data() {
     return {
       map: null,
       searchQuery: "",
-      currentMarker: null,
-      selectedLatLng: null,
-      isLoading: true,
       loadingSearch: false,
+      isLoading: true,
       snackbar: {
         visible: false,
         message: "",
         color: "error",
       },
+      selectedLatLng: null,
+      currentMarker: null,
       userLocationMarker: null,
       watchId: null,
-      markerLayer: null
     };
   },
   mounted() {
@@ -86,20 +85,17 @@ export default {
         this.map = L.map(mapContainer, {
           zoomControl: true,
           zoomAnimation: true,
-          dragging: true,
-          touchZoom: true,
-          doubleClickZoom: true,
-          scrollWheelZoom: true,
-          boxZoom: true,
-          keyboard: true,
+          dragging: !this.disabled,
+          touchZoom: !this.disabled,
+          doubleClickZoom: !this.disabled,
+          scrollWheelZoom: !this.disabled,
+          boxZoom: !this.disabled,
+          keyboard: !this.disabled,
         });
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "OpenStreetMap contributors",
         }).addTo(this.map);
-
-        // Create a layer group for markers
-        this.markerLayer = L.layerGroup().addTo(this.map);
 
         // Set a default view immediately
         this.map.setView([14.5995, 120.9842], 13); // Manila coordinates
@@ -110,22 +106,20 @@ export default {
 
           const latlng = e.latlng;
 
-          // Clear existing markers
-          this.markerLayer.clearLayers();
+          if (this.currentMarker) {
+            this.map.removeLayer(this.currentMarker);
+          }
 
           const pinIcon = L.divIcon({
             html: '<i class="fas fa-map-marker-alt"></i>',
             className: "custom-pin-marker",
             iconSize: [30, 30],
             iconAnchor: [15, 30],
-            popupAnchor: [0, -30]
           });
 
-          // Add new marker to the layer group
           this.currentMarker = L.marker(latlng, {
             icon: pinIcon,
-            draggable: false,
-          }).addTo(this.markerLayer);
+          }).addTo(this.map);
 
           this.selectedLatLng = latlng;
           
@@ -137,9 +131,7 @@ export default {
           
           // Show coordinates in a popup
           this.currentMarker.bindPopup(
-            `<b>Selected Location</b><br>
-             Lat: ${latlng.lat.toFixed(6)}<br>
-             Lng: ${latlng.lng.toFixed(6)}`
+            `<b>Selected Location</b>`
           ).openPopup();
         });
 
@@ -160,14 +152,14 @@ export default {
               });
 
               if (this.userLocationMarker) {
-                this.markerLayer.removeLayer(this.userLocationMarker);
+                this.map.removeLayer(this.userLocationMarker);
               }
 
               this.userLocationMarker = L.marker([latitude, longitude], {
                 icon: userIcon,
                 zIndexOffset: 1000,
               })
-                .addTo(this.markerLayer)
+                .addTo(this.map)
                 .bindPopup("Your location")
                 .openPopup();
 
@@ -189,6 +181,8 @@ export default {
               this.showSnackbar("Unable to get your location. Please enable location services.", "error");
             }
           );
+        } else {
+          this.showSnackbar("Geolocation is not supported by your browser", "error");
         }
 
         this.map.whenReady(() => {
@@ -227,7 +221,7 @@ export default {
 
             // Create user location marker
             if (this.userLocationMarker) {
-              this.markerLayer.removeLayer(this.userLocationMarker);
+              this.map.removeLayer(this.userLocationMarker);
             }
 
             const userIcon = L.divIcon({
@@ -240,7 +234,7 @@ export default {
               icon: userIcon,
               zIndexOffset: 1000,
             })
-              .addTo(this.markerLayer)
+              .addTo(this.map)
               .bindPopup("Your location")
               .openPopup();
 
@@ -321,10 +315,10 @@ export default {
     }
     if (this.map) {
       if (this.currentMarker) {
-        this.markerLayer.removeLayer(this.currentMarker);
+        this.map.removeLayer(this.currentMarker);
       }
       if (this.userLocationMarker) {
-        this.markerLayer.removeLayer(this.userLocationMarker);
+        this.map.removeLayer(this.userLocationMarker);
       }
       this.map.remove();
     }
