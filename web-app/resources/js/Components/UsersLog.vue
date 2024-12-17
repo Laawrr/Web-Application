@@ -1,26 +1,48 @@
 <template>
   <v-container class="pa-6">
     <v-card class="mx-auto" max-width="1500">
-      <v-card-title class="headline">
-        User Activity Log
-        <v-spacer></v-spacer>
-        <v-text-field
-          v-model="search"
-          append-icon="mdi-magnify"
-          label="Search"
-          single-line
-          hide-details
-          class="mx-4"
-          style="max-width: 300px;"
-        ></v-text-field>
-      </v-card-title>
-      <v-divider></v-divider>
       <v-data-table
-        :headers="headers"
+        :headers="[
+          { title: 'User', key: 'user.name' },
+          { title: 'Action', key: 'action' },
+          { title: 'Time', key: 'action_time' }
+        ]"
         :items="logs"
         :search="search"
+        :items-per-page="10"
         class="elevation-1"
-      ></v-data-table>
+      >
+        <template v-slot:top>
+          <v-card-title class="d-flex justify-space-between align-center">
+            <div>Users Activity Log</div>
+            <v-text-field
+              v-model="search"
+              append-icon="mdi-magnify"
+              label="Search"
+              single-line
+              hide-details
+              class="ml-2"
+              style="max-width: 300px;"
+            ></v-text-field>
+          </v-card-title>
+        </template>
+
+        <template v-slot:header="{ props }">
+          <tr>
+            <th class="text-left">User</th>
+            <th class="text-left">Action</th>
+            <th class="text-left">Time</th>
+          </tr>
+        </template>
+
+        <template v-slot:item="{ item }">
+          <tr>
+            <td>{{ item.user.name }}</td>
+            <td>{{ item.action }}</td>
+            <td>{{ formatDate(item.action_time) }}</td>
+          </tr>
+        </template>
+      </v-data-table>
     </v-card>
   </v-container>
 </template>
@@ -33,11 +55,6 @@ export default {
   data() {
     return {
       search: '',
-      headers: [
-        { text: 'Name', value: 'user.name', width: '20%' }, 
-        { text: 'Action', value: 'action', width: '20%' },
-        { text: 'Time', value: 'action_time', width: '20%' },
-      ],
       logs: [],
     };
   },
@@ -46,13 +63,16 @@ export default {
   },
   methods: {
     fetchLogs() {
-      axios.get('/admin/users-log') 
+      axios.get('/admin/users-log')
         .then(response => {
           this.logs = response.data.activityLog;
         })
         .catch(error => {
           console.error('Error fetching activity logs:', error);
         });
+    },
+    formatDate(date) {
+      return new Date(date).toLocaleString();
     },
   },
 };
@@ -61,6 +81,5 @@ export default {
 <style scoped>
 .v-data-table {
   background: white;
-  border-radius: 0 0 4px 4px;
 }
 </style>
