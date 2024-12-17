@@ -40,14 +40,20 @@
             indeterminate
           ></v-progress-linear>
         </template>
-        <template v-slot:header>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Date Created</th>
-            <th>Actions</th>
-          </tr>
+        <template v-slot:header.name>
+          <span class="font-weight-black">Name</span>
+        </template>
+        <template v-slot:header.email>
+          <span class="font-weight-black">Email</span>
+        </template>
+        <template v-slot:header.role>
+          <span class="font-weight-black">Role</span>
+        </template>
+        <template v-slot:header.created_at>
+          <span class="font-weight-black">Date Created</span>
+        </template>
+        <template v-slot:header.actions>
+          <span class="font-weight-black">Actions</span>
         </template>
         <template v-slot:item.actions="{ item }">
           <div class="d-flex align-center">
@@ -312,22 +318,32 @@ export default {
   opacity: 0.8;
 }
 
+:deep(.v-data-table-header) {
+  background-color: #f5f5f5 !important;
+}
+
 :deep(.v-data-table-header th) {
-  color: rgba(0, 0, 0, 0.87) !important;
-  font-weight: 600 !important;
+  color: black !important;
+  font-weight: 700 !important;
   font-size: 14px !important;
-  background: white !important;
   text-transform: none !important;
   letter-spacing: 0 !important;
-  border-bottom: thin solid rgba(0, 0, 0, 0.12) !important;
+  padding: 12px 16px !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.12) !important;
 }
 
 :deep(.v-data-table tbody td) {
   color: rgba(0, 0, 0, 0.87) !important;
+  padding: 8px 16px !important;
 }
 
 .text-h5 {
   color: rgba(0, 0, 0, 0.87);
   font-weight: 500;
+}
+
+.font-weight-black {
+  font-weight: 900 !important;
+  color: black !important;
 }
 </style>
