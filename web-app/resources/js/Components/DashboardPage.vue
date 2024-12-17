@@ -1,8 +1,7 @@
 <template>
   <div>
-    <header-bar />
-
     <main class="dashboard">
+      <!-- Dashboard Header -->
       <section class="dashboard-header">
         <h1>Lost and Found</h1>
         <div class="search-bar">
@@ -10,15 +9,16 @@
         </div>
       </section>
 
-      <!-- Featured posts -->
+      <!-- Featured Posts -->
       <section class="featured-posts">
         <div v-if="filteredPosts.length === 0" class="no-posts">
           <p>No posts found.</p>
         </div>
         <div v-for="post in filteredPosts" :key="post.id" class="card">
-          <img v-if="post.image" :src="post.image_url" alt="Item Image" class="card-image clickable" @click="enlargeImage(post.image_url)" />
-          <p class="post-date">{{ post.dateFound }}</p>
-          <p class="post-info"><strong>Status:</strong> {{ post.status }}</p>
+          <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image clickable"
+            @click="enlargeImage(post.image_url)" />
+          <p class="post-date">{{ post.lost_date || post.found_date }}</p>
+          <p class="post-info"><strong>Status:</strong> {{ post.isFound ? 'Found' : 'Lost' }}</p>
           <p class="post-info"><strong>Category:</strong> {{ post.category }}</p>
           <p class="post-info"><strong>Description:</strong> {{ post.description }}</p>
           <p class="post-info"><strong>Facebook:</strong> {{ post.facebook_link }}</p>
@@ -29,27 +29,26 @@
         </div>
       </section>
 
-      <!-- Add Item Modal -->
+      <!-- Upload Form Modal -->
       <div v-if="showUploadForm" class="modal-overlay">
         <div class="modal-content">
           <h2>Add Lost Item</h2>
-          <form @submit.prevent="uploadItem" class="upload-form">
+          <form @submit.prevent="submitForm" enctype="multipart/form-data">
             <div class="form-grid">
+              <!-- Left Column -->
               <div class="form-column">
                 <div class="form-group">
                   <label for="itemName">Item Name</label>
-                  <input type="text" id="itemName" v-model="newItem.name" required />
+                  <input type="text" id="itemName" v-model="newItem.item_name" required />
                 </div>
                 <div class="form-group">
                   <label for="itemStatus">Status</label>
                   <div id="itemStatus" class="radio-group">
                     <label>
-                      <input type="radio" v-model="newItem.status" value="Lost" required />
-                      Lost
+                      <input type="radio" v-model="newItem.status" value="Lost" required />Lost
                     </label>
                     <label>
-                      <input type="radio" v-model="newItem.status" value="Found" required />
-                      Found
+                      <input type="radio" v-model="newItem.status" value="Found" required />Found
                     </label>
                   </div>
                 </div>
@@ -66,9 +65,13 @@
                     <option value="Accessories">Accessories</option>
                   </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" v-if="newItem.status === 'Lost'">
                   <label for="dateLost">Date of Loss</label>
                   <input type="date" id="dateLost" v-model="newItem.lost_date" required />
+                </div>
+                <div class="form-group" v-if="newItem.status === 'Found'">
+                  <label for="dateFound">Date Found</label>
+                  <input type="date" id="dateFound" v-model="newItem.found_date" required />
                 </div>
                 <div class="form-group">
                   <label for="description">Item Description</label>
@@ -84,8 +87,8 @@
                 </div>
                 <div class="form-group">
                   <label for="itemImage">Upload Image</label>
-                  <input type="file" id="itemImage" @change="handleImageUpload" accept="image/*" />
-                  <img v-if="newItem.image" :src="newItem.image_url" alt="Preview" class="image-preview" />
+                  <input type="file" id="itemImage" accept="image/*" @change="handleFileUpload" />
+                  <img v-if="newItem.image_url" :src="newItem.image_url" alt="Preview" class="image-preview" />
                 </div>
               </div>
               <div class="form-column">
@@ -105,156 +108,192 @@
         </div>
       </div>
 
-      <!-- Enlarged Image Modal -->
       <div v-if="enlargedImage" class="modal-overlay" @click="closeImage">
         <img :src="enlargedImage" alt="Enlarged view" class="enlarged-image" />
       </div>
     </main>
 
-    <!-- Floating Add Button -->
     <button class="floating-btn" @click="showUploadForm = true">
       <span class="plus-icon">+</span>
     </button>
-
-    <footer-bar />
   </div>
 </template>
 
-
 <script>
-import axios from 'axios';
-import HeaderBar from './HeaderBar.vue';
-import FooterBar from './FooterBar.vue';
-import Map from './map.vue';
+import Map from "./map.vue";
+import axios from "axios";
 
 export default {
-  name: 'DashboardPage',
-  components: {
-    HeaderBar,
-    FooterBar,
-    Map
-  },
   data() {
     return {
-      searchQuery: '',
+      newItem: {
+        item_name: "",
+        status: "",
+        category: "",
+        lost_date: "",
+        found_date: "",
+        description: "",
+        facebook_link: "",
+        contact_number: "",
+        image_url: null,
+        user_id: null,
+      },
       posts: [],
       filteredPosts: [],
+      searchQuery: "",
       showUploadForm: false,
       enlargedImage: null,
-      newItem: {
-        name: '',
-        status: '',
-        category: 'Electronics',  // Default category
-        dateFound: new Date().toISOString().substr(0, 10),
-        description: '',
-        facebookLink: '',
-        contactNumber: '',
-        image: null,
-        location: null
-      }
     };
   },
+  created() {
+    this.fetchPosts();
+    this.fetchUserId();
+  },
   methods: {
+    async fetchUserId() {
+      try {
+        const response = await axios.get(window.userID);
+        this.newItem.user_id = response.data.id;
+      } catch (error) {
+        console.error("Error fetching user ID:", error.message);
+      }
+    },
+    async fetchPosts() {
+      try {
+        const [lostResponse, foundResponse] = await Promise.all([
+          axios.get(window.lostItemsUrl),
+          axios.get(window.foundItemsUrl),
+        ]);
+        this.posts = [...lostResponse.data, ...foundResponse.data];
+        this.filterPosts();
+      } catch (error) {
+        console.error("Error fetching posts:", error.message);
+      }
+    },
+    filterPosts() {
+      this.filteredPosts = this.posts.filter((post) =>
+        post.item_name.toLowerCase().includes(this.searchQuery.toLowerCase())
+      );
+    },
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            this.newItem.image_url = e.target.result; // Set the image preview
+          };
+          reader.readAsDataURL(file); // Convert file to a data URL
+        }
+    },
+    resetNewItem() {
+      this.newItem = {
+        item_name: "",
+        status: "",
+        category: "",
+        lost_date: "",
+        found_date: "",
+        description: "",
+        facebook_link: "",
+        contact_number: "",
+        image_url: null,
+        user_id: this.newItem.user_id,
+      };
+    },
     updateLocation(location) {
       this.newItem.location = location;
     },
-    filterPosts() {
-      this.filteredPosts = this.posts.filter(post =>
-        post.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        post.description.toLowerCase().includes(this.searchQuery.toLowerCase())
-      );
-    },
-    handleImageUpload(event) {
+    previewImage(event) {
       const file = event.target.files[0];
       if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        axios.post('/upload-endpoint', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        })
-          .then(response => {
-            this.newItem.image_url = response.data.file_url; // Use the returned file URL
-          })
-          .catch(error => console.error('Image upload failed:', error));
-      }
-    }
-    ,
-    async uploadItem() {
-      try {
-        const formData = {
-          lost_date: this.newItem.lost_date,
-          facebook_link: this.newItem.facebook_link,
-          contact_number: this.newItem.contact_number,
-          description: this.newItem.description,
-          category: this.newItem.category,
-          location: this.newItem.location,
-          image_url: this.newItem.image,
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.newItem.image_url = e.target.result;
         };
+        reader.readAsDataURL(file);
+      }
+    },
+    async submitForm() {
+      try {
+        const formData = new FormData();
+        for (const key in this.newItem) {
+          formData.append(key, this.newItem[key]);
+        }
+        const url =
+          this.newItem.status === "Lost" ? window.lostItemsStore : window.foundItemsStore;
 
-        await axios.post('/lost-items', formData);
-        await this.fetchLostItems();
+        await axios.post(url, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "X-CSRF-TOKEN": document
+              .querySelector('meta[name="csrf-token"]')
+              .getAttribute("content"),
+          },
+        });
+
+        alert("Item stored successfully!");
+        this.fetchPosts();
         this.closeUploadForm();
       } catch (error) {
-        console.error('Error uploading item:', error);
+        console.error("Error submitting form:", error.message);
       }
     },
     closeUploadForm() {
       this.showUploadForm = false;
-      this.newItem = {
-        name: '',
-        status: '',
-        category: 'Electronics',  // Reset to default category
-        dateFound: new Date().toISOString().substr(0, 10),
-        description: '',
-        facebookLink: '',
-        contactNumber: '',
-        image: null,
-        location: null
-      };
+      this.resetNewItem();
     },
-    enlargeImage(imageSrc) {
-      this.enlargedImage = imageSrc;
+    enlargeImage(imageUrl) {
+      this.enlargedImage = imageUrl;
     },
     closeImage() {
       this.enlargedImage = null;
     },
+    closeUploadForm() {
+      this.showUploadForm = false;
+      this.resetNewItem();
+    },
     async deletePost(postId) {
-      try {
-        await axios.delete(`/lost-items/${postId}`);
-        await this.fetchLostItems();
-      } catch (error) {
-        console.error('Error deleting post:', error);
+      if (confirm("Are you sure you want to delete this post?")) {
+        try {
+          const post = this.posts.find((post) => post.id === postId);
+          const endpoint =
+            post.status === "Found" ? `/found-items/${postId}` : `/lost-items/${postId}`;
+          await axios.delete(endpoint);
+
+          this.posts = this.posts.filter((post) => post.id !== postId);
+          this.filterPosts();
+          alert("Post deleted successfully.");
+        } catch (error) {
+          console.error("Error deleting post:", error.message);
+        }
       }
     },
-    async fetchLostItems() {
-      try {
-        const response = await axios.get('/lost-items');
-
-        // Check if data exists in response
-        if (response.data && Array.isArray(response.data)) {
-          this.posts = response.data;
-          this.filteredPosts = [...this.posts]; // Initialize filteredPosts
-        } else {
-          console.error('Invalid data format received:', response.data);
-          this.posts = [];
-          this.filteredPosts = [];
-        }
-      } catch (error) {
-        console.error('Error fetching lost items:', error);
-        this.posts = [];
-        this.filteredPosts = [];
-      }
-    }
-
+    created() {
+      axios.get(window.lostItemsUrl).then(response => {
+        const lostPosts = response.data.map(post => ({
+          ...post,
+          isFound: false // Flag for lost items
+        }));
+        this.posts = [...this.posts, ...lostPosts];
+        this.filterPosts();
+      });
+      axios.get(window.foundItemsUrl).then(response => {
+        const foundPosts = response.data.map(post => ({
+          ...post,
+          isFound: true // Flag for found items
+        }));
+        this.posts = [...this.posts, ...foundPosts];
+        this.filterPosts();
+      });
+    },
   },
-  mounted() {
-    this.fetchLostItems();
-  }
 };
 </script>
+
+
+
+
+
+
 
 <style scoped>
 .dashboard {

@@ -17,23 +17,49 @@ class FoundItemController extends Controller
     }
 
     /**
+     * Show the form for creating a new found item.
+     */
+    public function create()
+    {
+        return response()->json('Create found item form.');
+    }
+
+    /**
      * Store a newly created found item in storage.
      */
     public function store(Request $request)
     {
+        $imageUrl = null;
+        if ($request->hasFile('image_url')) {
+            $image = $request->file('image_url');
+            $filename = time() . '.' . $image->extension();
+            $image->move(public_path('assets/img'), $filename);
+            $imageUrl = asset('assets/img/' . $filename);
+        }
+
         $request->validate([
-            'item_name' => 'required|string|max:255',
             'found_date' => 'required|date',
-            'facebook_link' => 'required|string|max:255',
-            'contact_number' => 'required|string|max:15',
-            'description' => 'required|string',
+            'item_name' => 'required|string|max:255',
+            'facebook_link' => 'nullable|url',
+            'contact_number' => 'nullable|string|max:15',
+            'description' => 'nullable|string',
             'category' => 'required|string|max:100',
             'location' => 'required|string|max:255',
-            'image_url' => 'nullable|string|max:255',
-            'user_id' => 'required|exists:users,id'
+            'user_id' => 'required|exists:users,id',
         ]);
 
-        $foundItem = FoundItem::create($request->all());
+        $foundItem = FoundItem::create([
+            'found_date' => $request->input('found_date'),
+            'item_name' => $request->input('item_name'),
+            'facebook_link' => $request->input('facebook_link'),
+            'contact_number' => $request->input('contact_number'),
+            'description' => $request->input('description'),
+            'category' => $request->input('category'),
+            'location' => $request->input('location'),
+            'user_id' => $request->input('user_id'),
+            'image_url' => $imageUrl,
+        ]);
+
         return response()->json($foundItem, 201);
     }
 
@@ -47,25 +73,57 @@ class FoundItemController extends Controller
     }
 
     /**
+     * Show the form for editing the specified found item.
+     */
+    public function edit($id)
+    {
+        $foundItem = FoundItem::findOrFail($id);
+        return response()->json($foundItem);
+    }
+
+    /**
      * Update the specified found item in storage.
      */
     public function update(Request $request, $id)
     {
         $foundItem = FoundItem::findOrFail($id);
 
+        $imageUrl = $foundItem->image_url;
+        if ($request->hasFile('image_url')) {
+            $image = $request->file('image_url');
+            $filename = time() . '.' . $image->extension();
+            $image->move(public_path('assets/img'), $filename);
+            $imageUrl = asset('assets/img/' . $filename);
+
+            // Delete the old image if it exists
+            if ($foundItem->image_url && file_exists(public_path($foundItem->image_url))) {
+                unlink(public_path($foundItem->image_url));
+            }
+        }
+
         $request->validate([
-            'item_name' => 'required|string|max:255',
             'found_date' => 'required|date',
-            'facebook_link' => 'required|string|max:255',
-            'contact_number' => 'required|string|max:15',
-            'description' => 'required|string',
+            'item_name' => 'required|string|max:255',
+            'facebook_link' => 'nullable|url',
+            'contact_number' => 'nullable|string|max:15',
+            'description' => 'nullable|string',
             'category' => 'required|string|max:100',
             'location' => 'required|string|max:255',
-            'image_url' => 'nullable|string|max:255',
-            'user_id' => 'required|exists:users,id'
+            'user_id' => 'required|exists:users,id',
         ]);
 
-        $foundItem->update($request->all());
+        $foundItem->update([
+            'found_date' => $request->input('found_date'),
+            'item_name' => $request->input('item_name'),
+            'facebook_link' => $request->input('facebook_link'),
+            'contact_number' => $request->input('contact_number'),
+            'description' => $request->input('description'),
+            'category' => $request->input('category'),
+            'location' => $request->input('location'),
+            'user_id' => $request->input('user_id'),
+            'image_url' => $imageUrl,
+        ]);
+
         return response()->json($foundItem);
     }
 
@@ -75,6 +133,11 @@ class FoundItemController extends Controller
     public function destroy($id)
     {
         $foundItem = FoundItem::findOrFail($id);
+
+        if ($foundItem->image_url && file_exists(public_path($foundItem->image_url))) {
+            unlink(public_path($foundItem->image_url));
+        }
+
         $foundItem->delete();
 
         return response()->json(null, 204);

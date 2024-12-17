@@ -15,6 +15,7 @@ class LostItemSeeder extends Seeder
     {
         DB::table('lost_items')->insert([
             [
+                'item_name' => 'asd',
                 'lost_date' => Carbon::create('2024', '12', '15'),
                 'facebook_link' => 'https://www.facebook.com/lostitem1',
                 'contact_number' => '09123456789',
@@ -27,6 +28,7 @@ class LostItemSeeder extends Seeder
                 'updated_at' => Carbon::now(),
             ],
             [
+                'item_name' => 'asd',
                 'lost_date' => Carbon::create('2024', '12', '14'),
                 'facebook_link' => 'https://www.facebook.com/lostitem2',
                 'contact_number' => '09876543210',
@@ -34,11 +36,12 @@ class LostItemSeeder extends Seeder
                 'category' => 'Jewelry',
                 'location' => 'Butuan City Mall',
                 'image_url' => 'images/lost-items/ring1.jpg',
-                'user_id' => 2 ,  // Assuming the user with ID 2 exists
+                'user_id' => 1 ,  // Assuming the user with ID 2 exists
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
             [
+                'item_name' => 'asd',
                 'lost_date' => Carbon::create('2024', '12', '13'),
                 'facebook_link' => 'https://www.facebook.com/lostitem3',
                 'contact_number' => '09211223344',
@@ -46,7 +49,7 @@ class LostItemSeeder extends Seeder
                 'category' => 'Sunglasses',
                 'location' => 'Butuan City Square',
                 'image_url' => 'images/lost-items/sunglasses1.jpg',
-                'user_id' => 2,  // Assuming the user with ID 3 exists
+                'user_id' => 1,  // Assuming the user with ID 3 exists
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],

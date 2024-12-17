@@ -4,52 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\LostItem;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class LostItemController extends Controller
 {
     /**
-     * Store a newly created lost item in storage.
-     */
-    public function store(Request $request)
-    {
-        // Validate other fields
-        $request->validate([
-            'item_name' => 'required|string|max:255',
-            'lost_date' => 'required|date',
-            'facebook_link' => 'required|url',
-            'contact_number' => 'required|string',
-            'description' => 'required|string',
-            'category' => 'required|string',
-            'location' => 'required|string',
-            'image_url' => 'nullable|string',
-        ]);
-
-        // Retrieve user_id from session
-        $userId = Session::get('user_id'); // Ensure this is set when the user logs in
-
-        if ($userId) {
-            $lostItem = LostItem::create([
-                'user_id' => $userId,
-                'item_name' => $request->item_name,
-                'lost_date' => $request->lost_date,
-                'facebook_link' => $request->facebook_link,
-                'contact_number' => $request->contact_number,
-                'description' => $request->description,
-                'category' => $request->category,
-                'location' => $request->location,
-                'image_url' => $request->image_url,
-            ]);
-
-            return response()->json(['message' => 'Lost item saved successfully', 'data' => $lostItem], 201);
-        }
-
-        return response()->json(['error' => 'User not logged in or invalid session'], 401);
-    }
-
-    /**
-     * Fetch all lost items.
+     * Display a listing of the lost items.
      */
     public function index()
     {
@@ -58,11 +17,67 @@ class LostItemController extends Controller
     }
 
     /**
+     * Show the form for creating a new lost item.
+     */
+    public function create()
+    {
+        return response()->json('Create lost item form.');
+    }
+
+    /**
+     * Store a newly created lost item in storage.
+     */
+    public function store(Request $request)
+    {
+        $imageUrl = null;
+        if ($request->hasFile('image_url')) {
+            $image = $request->file('image_url');
+            $filename = time() . '.' . $image->extension();
+            $image->move(public_path('assets/img'), $filename);
+            $imageUrl = asset('assets/img/' . $filename);
+        }
+
+        $request->validate([
+            'lost_date' => 'required|date',
+            'item_name' => 'required|string|max:255',
+            'facebook_link' => 'nullable|url',
+            'contact_number' => 'nullable|string|max:15',
+            'description' => 'nullable|string',
+            'category' => 'required|string',
+            'location' => 'required|string',
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $lostItem = LostItem::create([
+            'lost_date' => $request->input('lost_date'),
+            'item_name' => $request->input('item_name'),
+            'facebook_link' => $request->input('facebook_link'),
+            'contact_number' => $request->input('contact_number'),
+            'description' => $request->input('description'),
+            'category' => $request->input('category'),
+            'location' => $request->input('location'),
+            'user_id' => $request->input('user_id'),
+            'image_url' => $imageUrl,
+        ]);
+
+        return redirect()->back()->with('success', 'Lost item created successfully.');
+    }
+
+    /**
      * Display the specified lost item.
      */
     public function show($id)
     {
-        $lostItem = LostItem::findOrFail($id);  // Retrieve the lost item by its ID
+        $lostItem = LostItem::findOrFail($id);
+        return response()->json($lostItem);
+    }
+
+    /**
+     * Show the form for editing the specified lost item.
+     */
+    public function edit($id)
+    {
+        $lostItem = LostItem::findOrFail($id);
         return response()->json($lostItem);
     }
 
@@ -73,42 +88,43 @@ class LostItemController extends Controller
     {
         $lostItem = LostItem::findOrFail($id);
 
-        $request->validate([
-            'item_name' => 'required|string|max:255',
-            'lost_date' => 'required|date',
-            'facebook_link' => 'required|url',
-            'contact_number' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category' => 'required|string|max:100',
-            'location' => 'required|string|max:255',
-            'image_url' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
-
-        // Update attributes
-        $lostItem->item_name = $request->input('item_name');
-        $lostItem->lost_date = $request->input('lost_date');
-        $lostItem->facebook_link = $request->input('facebook_link');
-        $lostItem->contact_number = $request->input('contact_number');
-        $lostItem->description = $request->input('description');
-        $lostItem->category = $request->input('category');
-        $lostItem->location = $request->input('location');
-
-        // Handle image update (if exists)
+        $imageUrl = $lostItem->image_url;
         if ($request->hasFile('image_url')) {
-            // Delete old image if it exists
-            if ($lostItem->image_url) {
-                Storage::disk('public')->delete($lostItem->image_url);
+            $image = $request->file('image_url');
+            $filename = time() . '.' . $image->extension();
+            $image->move(public_path('assets/img'), $filename);
+            $imageUrl = asset('assets/img/' . $filename);
+
+            // Delete the old image if it exists
+            if ($lostItem->image_url && file_exists(public_path($lostItem->image_url))) {
+                unlink(public_path($lostItem->image_url));
             }
-            // Store the new image
-            $lostItem->image_url = $request->file('image_url')->store('lost_items_images', 'public');
         }
 
-        $lostItem->save();
+        $request->validate([
+            'lost_date' => 'required|date',
+            'item_name' => 'required|string|max:255',
+            'facebook_link' => 'nullable|url',
+            'contact_number' => 'nullable|string|max:15',
+            'description' => 'nullable|string',
+            'category' => 'required|string',
+            'location' => 'required|string',
+            'user_id' => 'required|exists:users,id',
+        ]);
 
-        return response()->json([
-            'message' => 'Lost item successfully updated',
-            'lost_item' => $lostItem,
-        ], 200);
+        $lostItem->update([
+            'lost_date' => $request->input('lost_date'),
+            'item_name' => $request->input('item_name'),
+            'facebook_link' => $request->input('facebook_link'),
+            'contact_number' => $request->input('contact_number'),
+            'description' => $request->input('description'),
+            'category' => $request->input('category'),
+            'location' => $request->input('location'),
+            'user_id' => $request->input('user_id'),
+            'image_url' => $imageUrl,
+        ]);
+
+        return response()->json($lostItem);
     }
 
     /**
@@ -117,17 +133,13 @@ class LostItemController extends Controller
     public function destroy($id)
     {
         $lostItem = LostItem::findOrFail($id);
-        
-        // Delete associated image
-        if ($lostItem->image_url) {
-            Storage::disk('public')->delete($lostItem->image_url);
+
+        if ($lostItem->image_url && file_exists(public_path($lostItem->image_url))) {
+            unlink(public_path($lostItem->image_url));
         }
 
-        // Delete the lost item
         $lostItem->delete();
 
-        return response()->json([
-            'message' => 'Lost item successfully deleted',
-        ], 204);
+        return response()->json(null, 204);
     }
 }

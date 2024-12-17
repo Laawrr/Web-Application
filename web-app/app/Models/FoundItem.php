@@ -16,9 +16,6 @@ class FoundItem extends Model
         'description', 'category', 'location', 'image_url', 'user_id'
     ];
 
-    /**
-     * Get the user that owns the found item.
-     */
     public function user()
     {
         return $this->belongsTo(User::class);
