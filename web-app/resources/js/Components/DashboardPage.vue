@@ -18,6 +18,7 @@
           <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image clickable"
             @click="enlargeImage(post.image_url)" />
           <p class="post-date">{{ post.lost_date || post.found_date }}</p>
+
           <p class="post-info"><strong>Status:</strong> {{ post.isFound ? 'Found' : 'Lost' }}</p>
           <p class="post-info"><strong>Category:</strong> {{ post.category }}</p>
           <p class="post-info"><strong>Description:</strong> {{ post.description }}</p>
@@ -88,7 +89,8 @@
                 <div class="form-group">
                   <label for="itemImage">Upload Image</label>
                   <input type="file" id="itemImage" accept="image/*" @change="handleFileUpload" />
-                  <img v-if="newItem.image_url" :src="newItem.image_url" alt="Preview" class="image-preview" />
+                  <img v-if="newItem.image_preview_url" :src="newItem.image_preview_url" alt="Preview"
+                    class="image-preview" />
                 </div>
               </div>
               <div class="form-column">
@@ -124,6 +126,7 @@ import Map from "./map.vue";
 import axios from "axios";
 
 export default {
+  components: { Map },
   data() {
     return {
       newItem: {
@@ -135,6 +138,7 @@ export default {
         description: "",
         facebook_link: "",
         contact_number: "",
+        location: null,
         image_url: null,
         user_id: null,
       },
@@ -164,7 +168,9 @@ export default {
           axios.get(window.lostItemsUrl),
           axios.get(window.foundItemsUrl),
         ]);
-        this.posts = [...lostResponse.data, ...foundResponse.data];
+        const lostPosts = lostResponse.data.map(post => ({ ...post, isFound: false }));
+        const foundPosts = foundResponse.data.map(post => ({ ...post, isFound: true }));
+        this.posts = [...lostPosts, ...foundPosts];
         this.filterPosts();
       } catch (error) {
         console.error("Error fetching posts:", error.message);
@@ -178,12 +184,15 @@ export default {
     handleFileUpload(event) {
       const file = event.target.files[0];
       if (file) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            this.newItem.image_url = e.target.result; // Set the image preview
-          };
-          reader.readAsDataURL(file); // Convert file to a data URL
-        }
+        this.newItem.image_url = file;  // Store the raw file for later use (upload)
+
+        // Create a separate property for the image preview URL
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.newItem.image_preview_url = e.target.result;  // Store the base64 preview URL
+        };
+        reader.readAsDataURL(file);
+      }
     },
     resetNewItem() {
       this.newItem = {
@@ -195,6 +204,7 @@ export default {
         description: "",
         facebook_link: "",
         contact_number: "",
+        location: null,
         image_url: null,
         user_id: this.newItem.user_id,
       };
@@ -266,24 +276,6 @@ export default {
           console.error("Error deleting post:", error.message);
         }
       }
-    },
-    created() {
-      axios.get(window.lostItemsUrl).then(response => {
-        const lostPosts = response.data.map(post => ({
-          ...post,
-          isFound: false // Flag for lost items
-        }));
-        this.posts = [...this.posts, ...lostPosts];
-        this.filterPosts();
-      });
-      axios.get(window.foundItemsUrl).then(response => {
-        const foundPosts = response.data.map(post => ({
-          ...post,
-          isFound: true // Flag for found items
-        }));
-        this.posts = [...this.posts, ...foundPosts];
-        this.filterPosts();
-      });
     },
   },
 };
