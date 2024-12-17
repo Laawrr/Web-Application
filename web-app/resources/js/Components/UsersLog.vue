@@ -133,8 +133,17 @@ export default {
           this.loading = false;
         });
     },
-    formatDate(date) {
-      return new Date(date).toLocaleString();
+    formatDate(dateString) {
+      const options = {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      };
+      const date = new Date(dateString);
+      return date.toLocaleString('en-US', options);
     },
   },
 };
