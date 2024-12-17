@@ -13,7 +13,7 @@
       <v-btn icon>
         <v-icon>mdi-bell</v-icon>
       </v-btn>
-      <v-btn text color="secondary" class="logout-btn mt-3" @click="logout" style="margin-right: 80px;">
+      <v-btn text color="secondary" class="logout-btn mt-3" @click="handleSignOut"  style="margin-right: 80px;">
         Logout
       </v-btn>
     </v-app-bar>
@@ -57,6 +57,16 @@ import Dashboard from '@/Components/Dashboard.vue';
 import UsersView from '@/Components/UsersView.vue';
 import UsersLog from '@/Components/UsersLog.vue';
 import ReportedItems from '@/Components/ReportedItems.vue';
+import { ref } from 'vue';
+import { Link, router } from '@inertiajs/vue3';
+
+const handleSignOut = () => {
+    router.post(route('logout'), {}, {
+        onSuccess: () => {
+            router.visit('/');
+        }
+    });
+};
 
 export default {
   name: "AdminDashboard",
@@ -70,11 +80,6 @@ export default {
     return {
       currentView: 'dashboard',
     };
-  },
-  methods: {
-    logout() {
-      console.log("Logged out");
-    },
   },
 };
 </script>
