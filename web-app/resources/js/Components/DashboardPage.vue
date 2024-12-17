@@ -1,8 +1,5 @@
 <template>
   <div>
-    <!-- Header Bar -->
-    <HeaderBar />
-
     <main class="dashboard">
       <!-- Dashboard Header -->
       <section class="dashboard-header">
@@ -158,21 +155,25 @@
           </form>
         </div>
       </div>
-    </main>
 
-    <!-- Footer Bar -->
-    <FooterBar />
+      <div v-if="enlargedImage" class="modal-overlay" @click="closeImage">
+        <img :src="enlargedImage" alt="Enlarged view" class="enlarged-image" />
+      </div>
+    </main>
+    <button class="floating-btn" @click="showUploadForm = true">
+      <span class="plus-icon">+</span>
+    </button>
   </div>
 </template>
 
 
 <script>
+import Map from "./map.vue";
 import axios from "axios";
-import HeaderBar from '@/Components/HeaderBar.vue';
-import FooterBar from '@/Components/FooterBar.vue';
 
 export default {
-  components: { HeaderBar, FooterBar },
+  components: { Map },
+
   data() {
     return {
       newItem: {
@@ -254,6 +255,7 @@ export default {
     async fetchPosts() {
       try {
         const [lostResponse, foundResponse] = await Promise.all([axios.get(window.lostItemsUrl), axios.get(window.foundItemsUrl)]);
+
         const lostPosts = lostResponse.data.map(post => ({ ...post, isFound: false }));
         const foundPosts = foundResponse.data.map(post => ({ ...post, isFound: true }));
         this.posts = [...lostPosts, ...foundPosts];
@@ -552,7 +554,6 @@ export default {
   transform: translateY(-2px);
 }
 
-/* Modal Content */
 .modal-content {
   background-color: #fff;
   border-radius: 8px;

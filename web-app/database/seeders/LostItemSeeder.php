@@ -15,6 +15,7 @@ class LostItemSeeder extends Seeder
     {
         DB::table('lost_items')->insert([
             [
+                'item_name' => 'asd',
                 'lost_date' => Carbon::create('2024', '12', '15'),
                 'facebook_link' => 'https://www.facebook.com/lostitem1',
                 'contact_number' => '09123456789',
@@ -27,6 +28,7 @@ class LostItemSeeder extends Seeder
                 'updated_at' => Carbon::now(),
             ],
             [
+                'item_name' => 'asd',
                 'lost_date' => Carbon::create('2024', '12', '14'),
                 'facebook_link' => 'https://www.facebook.com/lostitem2',
                 'contact_number' => '09876543210',
@@ -39,6 +41,7 @@ class LostItemSeeder extends Seeder
                 'updated_at' => Carbon::now(),
             ],
             [
+                'item_name' => 'asd',
                 'lost_date' => Carbon::create('2024', '12', '13'),
                 'facebook_link' => 'https://www.facebook.com/lostitem3',
                 'contact_number' => '09211223344',

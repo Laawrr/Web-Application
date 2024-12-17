@@ -5,6 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\User;
+use App\Models\LostItem;
+use App\Models\FoundItem;
+use App\Models\Claim;
+use App\Models\ActivityLog;
+use Illuminate\Support\Facades\Auth; // Make sure this is imported for authentication
 
 class AdminController extends Controller
 {
@@ -15,35 +20,59 @@ class AdminController extends Controller
 
     public function dashboard()
     {
-        // Add your dashboard data logic here
+        // Fetching the counts from the database
+        $totalUsers = User::count();
+        $lostItems = LostItem::count(); 
+        $foundItems = FoundItem::count(); 
+        $claims = Claim::count();
+
+        // Return data in JSON format
         return response()->json([
-            'totalUsers' => User::count(),
-            'lostItems' => 7770, // Replace with actual count
-            'foundItems' => 256, // Replace with actual count
-            'alerts' => 24, // Replace with actual count
+            'totalUsers' => $totalUsers,
+            'lostItems' => $lostItems,
+            'foundItems' => $foundItems,
+            'claims' => $claims,
         ]);
     }
 
     public function users()
     {
+        $users = User::all();
+
         return response()->json([
-            'users' => User::all()
+            'users' => $users,
         ]);
     }
 
     public function usersLog()
     {
-        // Add your user log retrieval logic here
+        $activityLog = ActivityLog::with('user:id,name')->get();
+
         return response()->json([
-            'logs' => []
+            'activityLog' => $activityLog,
         ]);
     }
 
     public function reportedItems()
     {
-        // Add your reported items retrieval logic here
+        $lostItems = LostItem::with('user:id,name', 'claim:claim_id,claim_status')->get();
+        $foundItems = FoundItem::with('user:id,name', 'claim:claim_id,claim_status')->get();
+
         return response()->json([
-            'items' => []
+            'lostItems' => $lostItems,
+            'foundItems' => $foundItems,
+        ]);
+    }
+
+
+
+    public function getID()
+    {
+        $user = Auth::user(); 
+
+        return response()->json([
+            'id' => $user->id, 
+            'last_login_at' => $user->last_login_at, 
         ]);
     }
 }

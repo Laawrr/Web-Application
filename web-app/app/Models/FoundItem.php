@@ -12,15 +12,16 @@ class FoundItem extends Model
     protected $table = 'found_items';
 
     protected $fillable = [
-        'found_date', 'facebook_link', 'contact_number', 
+        'item_name','found_date', 'facebook_link', 'contact_number', 
         'description', 'category', 'location', 'image_url', 'user_id'
     ];
 
-    /**
-     * Get the user that owns the found item.
-     */
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+    public function claim()
+    {
+        return $this->hasOne(Claim::class, 'found_item_id');
     }
 }

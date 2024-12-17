@@ -9,6 +9,13 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
+
+    public function index()
+    {
+        $users = User::all(); // Get all users
+        return response()->json($users);
+    }
+
     public function store(Request $request)
     {
         $user = User::create($request->all());
@@ -57,5 +64,9 @@ class UserController extends Controller
         ]);
 
         return response()->json(null, 204);
+    }
+    public function getID(){
+        $userID = Auth::id();
+        return response()->json(['id' => $userID]);
     }
 }

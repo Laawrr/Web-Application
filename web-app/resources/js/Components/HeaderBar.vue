@@ -1,67 +1,36 @@
 <template>
     <!-- Navbar -->
-    <nav class="bg-white shadow-sm sticky top-0 z-10">
-      <div class="container mx-auto px-4">
-        <div class="flex items-center justify-between h-16">
-          <!-- Logo and App Name -->
-          <div class="flex items-center space-x-3">
-            <img src="/img/logo.png" alt="Logo" class="w-10 h-10">
-            <span class="text-xl font-bold text-gray-800">LostNoMore</span>
-          </div>
-  
-          <!-- Navbar Items -->
-          <div class="flex items-center space-x-6">
-  
-            <!-- Search Bar -->
-            <div class="relative hidden md:block">
-              <input
-                type="text"
-                placeholder="Search Lost Items..."
-                class="px-4 py-2 border border-gray-300 rounded-full w-60"
-              />
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                class="h-5 w-5 absolute right-2 top-2 text-gray-600"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 18l6 6M6 10a4 4 0 118 0 4 4 0 01-8 0z" />
-              </svg>
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <img src="/img/logo.png" alt="Logo" class="w-10 h-10 ">
+                    <span class="text-xl font-bold text-gray-800">LostNoMore</span>
+                </div>
+
+                <div class="flex items-center space-x-6">
+                    <Link href="/" class="text-gray-600 hover:text-teal-500">Home</Link>
+
+                    <a href="/edit-profile" class="text-gray-600 hover:text-teal-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4zM12 14c-3.3 0-6 1.7-6 4v2h12v-2c0-2.3-2.7-4-6-4z" />
+                        </svg>
+                    </a>
+
+
+
+                    <!-- Import Notification Component -->
+                    <Notification />
+
+                    <button @click="showLoginModal = true"
+                        class="bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition-colors">
+                        Sign Out
+                    </button>
+                </div>
             </div>
-  
-            <!-- Links -->
-            <Link href="/" class="text-gray-600 hover:text-teal-500 transition-colors">Home</Link>
-  
-            <a href="/edit-profile" class="text-gray-600 hover:text-teal-500">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4zM12 14c-3.3 0-6 1.7-6 4v2h12v-2c0-2.3-2.7-4-6-4z" />
-              </svg>
-            </a>
-  
-            <!-- Notification with Badge -->
-            <Notification />
-            
-            <!-- Dropdown for Profile -->
-            <div class="relative">
-              <button @click="showDropdown = !showDropdown" class="text-gray-600 hover:text-teal-500 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
-                </svg>
-              </button>
-  
-              <div v-if="showDropdown" class="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg p-2">
-                <a href="/edit-profile" class="block px-4 py-2 text-gray-800 hover:bg-teal-100 rounded-md">Edit Profile</a>
-                <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-teal-100 rounded-md">Settings</a>
-                <button @click="showLoginModal = true" class="block w-full text-left px-4 py-2 text-gray-800 hover:bg-teal-100 rounded-md">
-                  Sign Out
-                </button>
-              </div>
-            </div>
-  
-          </div>
         </div>
-      </div>
     </nav>
   </template>
   
