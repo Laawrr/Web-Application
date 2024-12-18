@@ -399,7 +399,7 @@ export default {
     console.log("CSRF token added:", token.content);
 
     // Determine the correct URL based on item status
-    const url = this.isFound ? window.foundItemsStore : window.lostItemsStore;
+    const url = this.newItem.status === "Lost" ? window.lostItemsStore : window.foundItemsStore;
     console.log("Post URL determined:", url);
 
     // Make the API request
