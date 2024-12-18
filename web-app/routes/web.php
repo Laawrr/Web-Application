@@ -11,12 +11,17 @@ use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\MarkerController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\CommentController;
+use App\Models\ClaimStatusReport;
 use App\Http\Middleware\CheckRole;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+
+Route::get('/claim-status-reports', function () {
+    return ClaimStatusReport::all();
+});
 
 Route::resource('users', UserController::class);
 Route::put('/users/{id}/edit', [UserController::class, 'update']);
