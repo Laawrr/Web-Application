@@ -1,9 +1,10 @@
 <template>
+
     <Head title="Finder" />
     <div class="min-h-screen bg-gray-50">
-        
+
         <Navbar :auth="$page.props.auth" @showLogin="handleShowLogin" />
-        
+
         <!-- Hero Section -->
         <div class="relative">
             <!-- Carousel Background -->
@@ -23,7 +24,7 @@
                     <h1 class="text-4xl md:text-5xl font-bold mb-6">Lost & Found Made Easy</h1>
                     <p class="text-xl mb-8 max-w-2xl mx-auto">Find what you've lost or help others recover their
                         belongings.</p>
-                    <button @click="handleShowLogin"
+                    <button @click="redirectToNewsfeed"
                         class="bg-white text-teal-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
                         Get Started
                     </button>
@@ -69,9 +70,13 @@
             <div class="container mx-auto px-4 text-center">
                 <h2 class="text-3xl font-bold mb-8">Ready to Get Started?</h2>
                 <p class="text-xl mb-8">Join our community and start finding lost items today.</p>
-                <button @click="handleShowLogin"
+                <button v-if="!isLoggedIn" @click="showLoginModal = true"
                     class="bg-teal-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-teal-600 transition-colors">
                     Join Now
+                </button>
+                <button v-else @click="redirectToNewsfeed"
+                    class="bg-teal-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-teal-600 transition-colors">
+                    Go to Newsfeed
                 </button>
             </div>
         </section>
@@ -85,14 +90,10 @@
 
         <!-- Login Modal -->
         <Modal :show="showLoginModal" @close="closeLoginModal">
-            <div class="min-h-screen flex items-center justify-center p-4">
-                <div class="w-full max-w-md bg-white rounded-lg shadow-xl">
-                    <div class="p-6">
-                        <div class="text-center mb-6">
-                            <h2 class="text-2xl font-bold text-gray-900">Welcome Back</h2>
-                            <p class="mt-2 text-sm text-gray-600">Please sign in to your account</p>
-                        </div>
-                        <Login @close="closeLoginModal" />
+            <div class="min-h-screen flex items-center justify-center">
+                <div class="w-full sm:max-w-lg">
+                    <div class="bg-white rounded-lg shadow-md p-8">
+                        <Login />
                     </div>
                 </div>
             </div>
@@ -101,28 +102,27 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { Head, usePage } from '@inertiajs/vue3';
 import Navbar from '@/Components/Navbar.vue';
 import Modal from '@/Components/Modal.vue';
 import Login from '@/Pages/Auth/Login.vue';
 
-const showLoginModal = ref(false);
-const currentSlide = ref(0);
+const router = useRouter();
 
-const handleShowLogin = () => {
-    showLoginModal.value = true;
-};
+const { auth } = usePage().props;
+const isLoggedIn = ref(!!auth.user);
 
-const closeLoginModal = () => {
-    showLoginModal.value = false;
-};
+const showLoginModal = ref(false);  // Track modal visibility
 
 const slides = [
     'img/image3.png',
     'img/image4.png',
     'img/image5.png',
+    'img/image6.png',
 ];
+const currentSlide = ref(0);
 
 const nextSlide = () => {
     currentSlide.value = (currentSlide.value + 1) % slides.length;
@@ -131,7 +131,24 @@ const nextSlide = () => {
 onMounted(() => {
     setInterval(nextSlide, 5000);
 });
+
+const redirectToNewsfeed = () => {
+    if (isLoggedIn.value) {
+        window.location.href = '/newsfeed';  
+    } else {
+        showLoginModal.value = true; 
+    }
+};
+
+const handleShowLogin = () => {
+    showLoginModal.value = true;
+};
+
+const closeLoginModal = () => {
+    showLoginModal.value = false;
+};
 </script>
+
 
 <style>
 @import '@fortawesome/fontawesome-free/css/all.css';
