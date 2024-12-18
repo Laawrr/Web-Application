@@ -125,21 +125,43 @@ const removeImage = () => {
 };
 
 const submitClaim = () => {
-    if (!imageFile.value || !props.item) return;
+    // Ensure file and item exist
+    if (!imageFile.value || !props.item) {
+        alert("Please upload an image and ensure the item exists.");
+        return;
+    }
+
+    console.log("Image File:", imageFile.value); // Log the file value
+    console.log("Item:", props.item); // Log the item object
 
     const formData = new FormData();
-    formData.append('proof_image', imageFile.value);
-    formData.append('item_id', props.item.id);
-    formData.append('item_type', props.itemType);
+    formData.append('proof_of_ownership', imageFile.value); // Attach the file
+    formData.append('found_item_id', props.item.id); // Attach the item's ID
+    formData.append('claim_status', 'Pending'); // Correct the claim status value
 
+    // Log the FormData content
+    for (const pair of formData.entries()) {
+        console.log(`${pair[0]}:`, pair[1]);
+    }
+
+    // Use `router.post` to send the form data
     router.post('/claims', formData, {
         forceFormData: true,
         onSuccess: () => {
+            alert("Claim submitted successfully!");
             imagePreview.value = null;
             imageFile.value = null;
+
+            console.log("Form submission succeeded. Image preview and file reset.");
+        },
+        onError: (errors) => {
+            console.error("Submission failed:", errors);
+            alert("Failed to submit the claim. Please try again.");
         },
     });
 };
+
+
 
 const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
