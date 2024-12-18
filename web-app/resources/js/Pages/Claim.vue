@@ -136,7 +136,7 @@ const submitClaim = () => {
 
     const formData = new FormData();
     formData.append('proof_of_ownership', imageFile.value); // Attach the file
-    formData.append('found_item_id', props.item.id); // Attach the item's ID
+    formData.append('item_id', props.item.id); // Attach the item's ID
     formData.append('claim_status', 'Pending'); // Correct the claim status value
 
     // Log the FormData content
