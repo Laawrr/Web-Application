@@ -4,7 +4,6 @@
       <main class="dashboard">
         <!-- Dashboard Header -->
         <section class="dashboard-header">
-          
           <div class="search-bar">
             <input type="text" v-model="searchQuery" placeholder="Search for lost items..." @input="filterPosts" />
           </div>
@@ -25,77 +24,69 @@
         </section>
 
         <!-- Post Detail Modal -->
-           <div v-if="showPostModal" class="post-modal__overlay" @click="closePostModal">
-  <div class="post-modal__content" @click.stop>
-    <h2 class="post-modal__title">Item Details</h2>
+        <div v-if="showPostModal" class="post-modal__overlay" @click="closePostModal">
+          <div class="post-modal__content" @click.stop>
+            <h2 class="post-modal__title">Item Details</h2>
 
-    <img v-if="currentPost.image_url" 
-         :src="currentPost.image_url" 
-         alt="Item Image" 
-         class="post-modal__image" />
-    
-    <div class="post-modal__info">
-      <p class="post-modal__text"><strong>Item Name:</strong> {{ currentPost.item_name }}</p>
-      <p class="post-modal__text"><strong>Status:</strong> {{ currentPost.isFound ? 'Found' : 'Lost' }}</p>
-      <p class="post-modal__text"><strong>Category:</strong> {{ currentPost.category }}</p>
-      <p class="post-modal__text"><strong>Description:</strong> {{ currentPost.description }}</p>
-      <p class="post-modal__text"><strong>Facebook:</strong> {{ currentPost.facebook_link }}</p>
-      <p class="post-modal__text"><strong>Contact:</strong> {{ currentPost.contact_number }}</p>
-    </div>
+            <img v-if="currentPost.image_url" 
+                 :src="currentPost.image_url" 
+                 alt="Item Image" 
+                 class="post-modal__image" />
+            
+            <div class="post-modal__info">
+              <p class="post-modal__text"><strong>Item Name:</strong> {{ currentPost.item_name }}</p>
+              <p class="post-modal__text"><strong>Status:</strong> {{ currentPost.isFound ? 'Found' : 'Lost' }}</p>
+              <p class="post-modal__text"><strong>Category:</strong> {{ currentPost.category }}</p>
+              <p class="post-modal__text"><strong>Description:</strong> {{ currentPost.description }}</p>
+              <p class="post-modal__text"><strong>Facebook:</strong> {{ currentPost.facebook_link }}</p>
+              <p class="post-modal__text"><strong>Contact:</strong> {{ currentPost.contact_number }}</p>
+            </div>
 
-    <!-- Edit Button -->
-    <button @click="openEditModal" class="post-modal__edit-btn">Edit</button>
+            <!-- Edit Button -->
+            <button @click="openEditModal" class="post-modal__edit-btn">Edit</button>
 
-    <!-- Close Button -->
-    <button @click="closePostModal" class="post-modal__close-btn">Close</button>
-  </div>
-</div>
+            <!-- Close Button -->
+            <button @click="closePostModal" class="post-modal__close-btn">Close</button>
+          </div>
+        </div>
 
-<!-- Edit Modal -->
-<div v-if="showEditModal" class="edit-modal__overlay" @click="closeEditModal">
-  <div class="edit-modal__content" @click.stop>
-    <h2 class="edit-modal__title">Edit Item</h2>
+        <!-- Edit Modal -->
+        <div v-if="showEditModal" class="edit-modal__overlay" @click="closeEditModal">
+          <div class="edit-modal__content" @click.stop>
+            <h2 class="edit-modal__title">Edit Item</h2>
 
-    <form @submit.prevent="submitEditForm">
-      <!-- Example input fields for editing -->
-      <div class="form-group">
-        <label for="editItemName">Item Name</label>
-        <input type="text" id="editItemName" v-model="currentPost.item_name" required />
-      </div>
-      <div class="form-group">
-        <label for="editDescription">Description</label>
-        <textarea id="editDescription" v-model="currentPost.description" required></textarea>
-      </div>
-      <div class="form-group">
-        <label for="editFacebook">Facebook</label>
-        <input type="text" id="editFacebook" v-model="currentPost.facebook_link" required />
-      </div>
-      <div class="form-group">
-        <label for="editContact">Contact</label>
-        <input type="text" id="editContact" v-model="currentPost.contact_number" required />
-      </div>
-      
-      <!-- More fields as needed -->
-      
-      <div class="form-actions">
-        <button type="submit" class="submit-btn">Save Changes</button>
-        <button type="button" @click="closeEditModal" class="cancel-btn">Cancel</button>
-      </div>
-    </form>
+            <form @submit.prevent="submitEditForm">
+              <div class="form-group">
+                <label for="editItemName">Item Name</label>
+                <input type="text" id="editItemName" v-model="currentPost.item_name" required />
+              </div>
+              <div class="form-group">
+                <label for="editDescription">Description</label>
+                <textarea id="editDescription" v-model="currentPost.description" required></textarea>
+              </div>
+              <div class="form-group">
+                <label for="editFacebook">Facebook</label>
+                <input type="text" id="editFacebook" v-model="currentPost.facebook_link" required />
+              </div>
+              <div class="form-group">
+                <label for="editContact">Contact</label>
+                <input type="text" id="editContact" v-model="currentPost.contact_number" required />
+              </div>
 
-    <!-- Close Button for Edit Modal -->
-    <button @click="closeEditModal" class="edit-modal__close-btn">Close</button>
-  </div>
-</div>
+              <div class="form-actions">
+                <button type="submit" class="submit-btn">Save Changes</button>
+                <button type="button" @click="closeEditModal" class="cancel-btn">Cancel</button>
+              </div>
+            </form>
 
-
+            <!-- Close Button for Edit Modal -->
+            <button @click="closeEditModal" class="edit-modal__close-btn">Close</button>
+          </div>
+        </div>
 
         <!-- Upload Form Modal (unchanged) -->
         <div v-if="showUploadForm" class="modal-overlay">
-          <!-- Upload Form Modal Content (existing content) -->
-          <div v-if="showUploadForm" class="modal-overlay">
           <div class="modal-content">
-
             <h2 style="font-size: 25px; font-weight: bolder;" class="mb-3">Add Item</h2>
 
             <form @submit.prevent="submitForm" enctype="multipart/form-data">
@@ -157,21 +148,22 @@
                       class="image-preview" />
                   </div>
                 </div>
+
+                <!-- Right Column -->
                 <div class="form-column">
                   <div class="map-wrapper">
                     <div class="map-area">
                       <div class="map-container" :class="{ enabled: mapEnabled }">
-                        <Map ref="mapComponent" @location-selected="updateLocation" :disabled="false" />
+                        <Map ref="mapComponent" @location-selected="updateLocation" :disabled="!mapEnabled" />
                         <div class="map-blur-overlay" :class="{ enabled: mapEnabled }"></div>
                       </div>
                       <div class="map-controls">
-                        <div class="map-overlay" v-if="!locationSelected">
+                        <div class="map-overlay" v-if="!mapEnabled">
                           <button class="add-location-btn" @click="enableLocationSelection">
-                            <i class="fas fa-map-marker-alt"></i>
-                            Add Location (Click to Enable Map)
+                            <i class="fas fa-map-marker-alt"></i> Add Location (Click to Enable Map)
                           </button>
                         </div>
-                        <div v-if="locationSelected" class="location-status" style="margin-bottom: 340px">
+                        <div v-if="locationSelected" class="location-status">
                           <span v-if="newItem.location">Location selected ✓</span>
                           <span v-else>Click on the map to place a pin</span>
                         </div>
@@ -180,6 +172,7 @@
                   </div>
                 </div>
               </div>
+
               <div class="form-actions">
                 <button type="button" @click="closeUploadForm" class="cancel-btn">Cancel</button>
                 <button type="submit" class="submit-btn" :disabled="isSubmitting || !newItem.location">
@@ -190,15 +183,11 @@
             </form>
           </div>
         </div>
-        
 
         <div v-if="enlargedImage" class="modal-overlay" @click="closeImage">
           <img :src="enlargedImage" alt="Enlarged view" class="enlarged-image" />
         </div>
 
-      
-        </div>
-        
       </main>
 
       <button class="floating-btn" @click="showUploadForm = true">
@@ -208,12 +197,14 @@
   </div>
 </template>
 
-
 <script>
-import Map from "./map.vue";
+import Map from '@/components/Map.vue'; // Ensure the path is correct
 import axios from "axios";
 
 export default {
+  components: {
+    Map,
+  },
   data() {
     return {
       posts: [],
@@ -221,7 +212,8 @@ export default {
       searchQuery: "",
       currentPost: null,  // Holds the current post for modal display
       showPostModal: false,  // Controls the visibility of the post modal
-      showEditModal: false,  // Controls the visibility of the edit modal
+      showEditModal: false,
+      showUploadForm: false,  // Controls the visibility of the edit modal
       newItem: {
         item_name: "",
         status: "",
@@ -243,16 +235,28 @@ export default {
       enlargedImage: null,
     };
   },
+
   created() {
     this.fetchPosts();
   },
   methods: {
+    showError(message) {
+      alert(message);
+    },
     // Method to open the post modal
     openPostModal(post) {
       this.currentPost = post;
       this.showPostModal = true;
     },
-    
+    updateLocation(location) {
+      console.log('Location selected:', location); 
+      this.newItem.location = location; 
+    },  
+    enableLocationSelection() {
+      console.log('Map enabled!'); 
+      this.mapEnabled = true;
+    },
+
     // Method to close the post modal
     closePostModal() {
       this.showPostModal = false;
@@ -312,7 +316,7 @@ export default {
         }
       }
     },
-    
+
     // Handle file upload
     handleFileUpload(event) {
       const file = event.target.files[0];
@@ -328,101 +332,41 @@ export default {
       }
     },
     
-    // Reset new item form
-    resetNewItem() {
-      this.newItem = {
-        item_name: "",
-        status: "",
-        category: "",
-        lost_date: "",
-        found_date: "",
-        description: "",
-        facebook_link: "",
-        contact_number: "",
-        location: null,
-        image_file: null,
-        image_preview_url: null,
-        user_id: this.newItem.user_id,
-      };
-    },
-    
+    // Submit the upload form
     async submitForm() {
-      if (!this.newItem.location) {
-        this.showError("Please select a location on the map first");
-        return;
-      }
-      
-      this.isSubmitting = true;
       try {
+        this.isSubmitting = true;
         const formData = new FormData();
-        
-        // Handle the image file
-        if (this.newItem.image_file) {
-          formData.append('image_url', this.newItem.image_file); 
-        }
-        
-        // Handle all other form fields
-        const formFields = {
-          item_name: this.newItem.item_name,
-          status: this.newItem.status,
-          category: this.newItem.category,
-          description: this.newItem.description,
-          facebook_link: this.newItem.facebook_link,
-          contact_number: this.newItem.contact_number,
-          user_id: this.newItem.user_id,
-          latitude: this.newItem.location.lat,
-          longitude: this.newItem.location.lng
-        };
-
-        formFields.location = `${this.newItem.location.lat},${this.newItem.location.lng}`;
-
-        // Add lost_date or found_date based on status
-        if (this.newItem.status === 'Lost') {
-          formFields.lost_date = this.newItem.lost_date;
-        } else {
-          formFields.found_date = this.newItem.found_date;
-        }
-        
-        // Append all form fields
-        Object.keys(formFields).forEach(key => {
-          if (formFields[key] !== null && formFields[key] !== undefined) {
-            formData.append(key, formFields[key]);
-          }
+        Object.keys(this.newItem).forEach(key => {
+          formData.append(key, this.newItem[key]);
         });
-
-        // Get CSRF token from meta tag
-        const token = document.head.querySelector('meta[name="csrf-token"]');
         
-        if (!token) {
-          this.showError("CSRF token not found. Please refresh the page.");
-          return;
-        }
-
-        // Add CSRF token to form data
-        formData.append('_token', token.content);
-
-        const url = this.newItem.status === "Lost" ? window.lostItemsStore : window.foundItemsStore;
-
-        const response = await axios.post(url, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "X-CSRF-TOKEN": token.content,
-          },
-        });
-
-        console.log(response.data); 
-        this.resetNewItem();
+        const response = await axios.post('/path-to-upload-post', formData);
+        
+        alert('Post submitted successfully');
         this.showUploadForm = false;
-        this.isSubmitting = false;
       } catch (error) {
-        console.error("Error:", error);
-        this.showError("There was an error submitting the form. Please try again.");
+        console.error('Error submitting form:', error.message);
+        this.showError('Error submitting the form');
+      } finally {
         this.isSubmitting = false;
       }
     },
-    
-    showError(message) {
-      alert(message);
+
+    // Close the upload form modal
+    closeUploadForm() {
+      this.showUploadForm = false;
+      this.newItem = {};  // Reset the newItem data
+    },
+
+    // Enlarging the image on click
+    enlargeImage(imageUrl) {
+      this.enlargedImage = imageUrl;
+    },
+
+    // Close the enlarged image view
+    closeImage() {
+      this.enlargedImage = null;
     }
   }
 };
