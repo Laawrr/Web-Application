@@ -12,6 +12,7 @@ use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Auth; // Import for authentication
 use Illuminate\Support\Facades\Hash; // Import for password hashing
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
@@ -25,7 +26,12 @@ class AdminController extends Controller
         $totalUsers = User::count();
         $lostItems = LostItem::count();
         $foundItems = FoundItem::count();
-        $claims = Claim::count();
+        $usersWithClaimsCount = DB::table('users')
+            ->select('users.id', 'users.name', DB::raw('get_user_claims_count(users.id) as claim_count'))
+            ->get();
+
+        // Extract total claims count from the query result
+        $claims = $usersWithClaimsCount->sum('claim_count');
 
         return response()->json([
             'totalUsers' => $totalUsers,
