@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\FoundItem;
+use App\Models\foundItem;
 use Illuminate\Http\Request;
 
-class FoundItemController extends Controller
+class foundItemController extends Controller
 {
     /**
      * Display a listing of the found items.
      */
     public function index()
     {
-        $foundItems = FoundItem::all();
+        $foundItems = foundItem::all();
         return response()->json($foundItems);
     }
 
@@ -43,12 +43,12 @@ class FoundItemController extends Controller
             'facebook_link' => 'nullable|url',
             'contact_number' => 'nullable|string|max:15',
             'description' => 'nullable|string',
-            'category' => 'required|string|max:100',
-            'location' => 'required|string|max:255',
+            'category' => 'required|string',
+            'location' => 'required|string',
             'user_id' => 'required|exists:users,id',
         ]);
 
-        $foundItem = FoundItem::create([
+        $foundItem = foundItem::create([
             'found_date' => $request->input('found_date'),
             'item_name' => $request->input('item_name'),
             'facebook_link' => $request->input('facebook_link'),
@@ -60,7 +60,7 @@ class FoundItemController extends Controller
             'image_url' => $imageUrl,
         ]);
 
-        return response()->json($foundItem, 201);
+        return redirect()->back()->with('success', 'found item created successfully.');
     }
 
     /**
@@ -68,7 +68,7 @@ class FoundItemController extends Controller
      */
     public function show($id)
     {
-        $foundItem = FoundItem::findOrFail($id);
+        $foundItem = foundItem::findOrFail($id);
         return response()->json($foundItem);
     }
 
@@ -77,7 +77,7 @@ class FoundItemController extends Controller
      */
     public function edit($id)
     {
-        $foundItem = FoundItem::findOrFail($id);
+        $foundItem = foundItem::findOrFail($id);
         return response()->json($foundItem);
     }
 
@@ -86,7 +86,7 @@ class FoundItemController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $foundItem = FoundItem::findOrFail($id);
+        $foundItem = foundItem::findOrFail($id);
 
         $imageUrl = $foundItem->image_url;
         if ($request->hasFile('image_url')) {
@@ -107,8 +107,8 @@ class FoundItemController extends Controller
             'facebook_link' => 'nullable|url',
             'contact_number' => 'nullable|string|max:15',
             'description' => 'nullable|string',
-            'category' => 'required|string|max:100',
-            'location' => 'required|string|max:255',
+            'category' => 'required|string',
+            'location' => 'required|string',
             'user_id' => 'required|exists:users,id',
         ]);
 
@@ -132,7 +132,7 @@ class FoundItemController extends Controller
      */
     public function destroy($id)
     {
-        $foundItem = FoundItem::findOrFail($id);
+        $foundItem = foundItem::findOrFail($id);
         
         $filePath = public_path($foundItem->image_url);
         if (file_exists($filePath)) {
