@@ -12,6 +12,8 @@
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="#features" class="text-gray-600 hover:text-teal-500">About</a>
                     <a href="#contact" class="text-gray-600 hover:text-teal-500">Contact</a>
+                    <a href="#contact" class="text-gray-600 hover:text-teal-500">Contact</a>
+
                     
                     <template v-if="!$page.props.auth?.user">
                         <button @click="$emit('showLogin')" class="text-gray-600 hover:text-teal-500">Login</button>
