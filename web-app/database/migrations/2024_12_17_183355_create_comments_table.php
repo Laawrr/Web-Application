@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::create('comments', function (Blueprint $table) {
             $table->id(); // Auto-increment primary key
             $table->unsignedBigInteger('user_id'); // Foreign key to users
-            $table->morphs('commentable'); // Polymorphic relationship (model + ID)
+            $table->unsignedBigInteger('commentable_id');
+            $table->string('commentable_type');
             $table->text('text'); // Comment text
             $table->timestamps(); // created_at and updated_at
 

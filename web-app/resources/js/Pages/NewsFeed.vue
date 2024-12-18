@@ -55,7 +55,7 @@
             <h3 class="text-lg font-semibold text-gray-800 mb-2">Comments</h3>
 
             <!-- Comment Button -->
-            <button @click="activeCommentModal = item.id"
+            <button @click="openCommentModal(item)"
               class="flex items-center space-x-2 text-blue-500 hover:text-blue-600">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-2" fill="none" stroke="currentColor"
                 viewBox="0 0 24 24" stroke-width="2">
@@ -67,12 +67,13 @@
 
             <!-- Comment Modal -->
             <CommentModal
-              :show="activeCommentModal === item.id"
+              v-if="activeCommentModal === item.id"
+              :show="true"
               :comments="item.comments || []"
-              :item="item"
+              :item="selectedItem || item"
               :item-id="item.id"
               :item-type="item.isFound ? 'found' : 'lost'"
-              @close="activeCommentModal = null"
+              @close="closeCommentModal"
               @submit-comment="submitComment"
             />
           </div>
@@ -103,6 +104,7 @@ export default {
     const userName = ref(null);
     const currentUserId = ref(null);
     const activeCommentModal = ref(null);
+    const selectedItem = ref(null);
 
     // Fetch the current user's ID
     const fetchCurrentUser = async () => {
@@ -267,13 +269,17 @@ export default {
         
         if (!text.trim()) return;
 
-        const response = await axios.post("/comments", {
+        console.log('Submitting comment with data:', {
           item_id: itemId,
           text: text.trim(),
           item_type: itemType
         });
 
-        console.log('Comment submission response:', response.data);
+        const response = await axios.post("/comments", {
+          item_id: itemId,
+          text: text.trim(),
+          item_type: itemType
+        });
 
         // Find the item and add the new comment
         const item = lostItems.value.find(item => item.id === itemId);
@@ -282,28 +288,44 @@ export default {
             item.comments = [];
           }
           
-          // Add the new comment with all required fields
-          if (response.data.success && response.data.comment) {
+          // Add the new comment with user data from the response
+          if (response.data.comment) {
             const newComment = {
               ...response.data.comment,
-              userName: response.data.comment.user?.name || userName.value,
-              text: text.trim(),
-              created_at: new Date().toISOString()
+              userName: userName.value // Add the current user's name to the comment
             };
-            
-            item.comments.push(newComment);
+            item.comments.unshift(newComment);
             
             // Refresh comments to ensure consistency
             await fetchComments();
           }
         }
+
+        return response.data;
       } catch (error) {
         console.error("Error submitting comment:", error);
+        if (error.response && error.response.data) {
+          console.error("Server error details:", error.response.data);
+        }
+        throw error;
       }
     };
 
     const handleClaim = (item) => {
       router.visit(`/claims?item_id=${item.id}&item_type=${item.isFound ? 'found' : 'lost'}`);
+    };
+
+    const openCommentModal = (item) => {
+      if (item) {
+        selectedItem.value = { ...item };  // Create a copy of the item
+        activeCommentModal.value = item.id;
+        console.log('Opening modal for item:', selectedItem.value);
+      }
+    };
+
+    const closeCommentModal = () => {
+      activeCommentModal.value = null;
+      selectedItem.value = null;
     };
 
     // Format date helper function
@@ -326,8 +348,11 @@ export default {
       lostItems,
       loading,
       activeCommentModal,
+      selectedItem,
       handleClaim,
       submitComment,
+      openCommentModal,
+      closeCommentModal,
       formatDate
     };
   }

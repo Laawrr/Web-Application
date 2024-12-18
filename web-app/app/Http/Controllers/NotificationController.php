@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Models\LostItem;
 use App\Models\FoundItem;
+use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -19,12 +20,36 @@ class NotificationController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($notification) {
+                // Parse the data to get user information
+                $data = json_decode($notification->data, true);
+                
+                // Get the comment author's name if this is a comment notification
+                $userName = 'Unknown User';
+                if ($notification->type === 'comment') {
+                    if (isset($data['commenter_name'])) {
+                        $userName = $data['commenter_name'];
+                    } elseif (isset($data['comment_id'])) {
+                        $comment = \App\Models\Comment::with('user')->find($data['comment_id']);
+                        if ($comment && $comment->user) {
+                            $userName = $comment->user->name;
+                            // Update the notification data to include the commenter name
+                            $data['commenter_name'] = $userName;
+                            $notification->data = json_encode($data);
+                            $notification->save();
+                        }
+                    }
+                }
+
+                // Format the date
+                $createdAt = $notification->created_at ? $notification->created_at->format('M d, Y, h:i A') : null;
+
                 return [
                     'id' => $notification->id,
                     'type' => $notification->type,
-                    'data' => $notification->data,
+                    'data' => $data, // Return parsed data instead of JSON string
                     'read_at' => $notification->read_at,
-                    'created_at' => $notification->created_at,
+                    'created_at' => $createdAt,
+                    'userName' => $userName
                 ];
             });
 
@@ -33,20 +58,35 @@ class NotificationController extends Controller
 
     public function markAsRead(Request $request, $id)
     {
-        $notification = Notification::where('id', $id)
-            ->where('user_id', Auth::id())
-            ->first();
+        try {
+            $notification = Notification::where('id', $id)
+                ->where('user_id', Auth::id())
+                ->first();
 
-        if (!$notification) {
-            return response()->json(['message' => 'Notification not found'], 404);
+            if (!$notification) {
+                return response()->json(['error' => 'Notification not found'], 404);
+            }
+
+            if (!$notification->read_at) {
+                $notification->read_at = now();
+                $notification->save();
+            }
+
+            return response()->json([
+                'message' => 'Notification marked as read',
+                'notification' => [
+                    'id' => $notification->id,
+                    'read_at' => $notification->read_at
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error marking notification as read:', [
+                'notification_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Failed to mark notification as read'], 500);
         }
-
-        if (!$notification->read_at) {
-            $notification->read_at = now();
-            $notification->save();
-        }
-
-        return response()->json(['message' => 'Notification marked as read']);
     }
 
     public function markAllAsRead(Request $request)
