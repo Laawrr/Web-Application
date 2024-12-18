@@ -105,4 +105,8 @@ Route::prefix('found-items')->group(function () {
 Route::get('/session', [SessionController::class, 'show']); // To view session details
 Route::delete('/session', [SessionController::class, 'destroy']); // To destroy session
 
+// Comment Routes
+Route::post('/api/comments', [CommentController::class, 'store']);
+Route::get('/api/comments/{id}', [CommentController::class, 'show']);
+
 require __DIR__.'/auth.php';
