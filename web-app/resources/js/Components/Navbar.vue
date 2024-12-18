@@ -21,7 +21,10 @@
                     </template>
 
                     <template v-else>
+                        <Link :href="route('dashboard')" class="text-gray-600 hover:text-teal-500">NewsFeed</Link>
+
                         <Link :href="route('dashboard')" class="text-gray-600 hover:text-teal-500">Dashboard</Link>
+
                         <div class="relative">
                             <button @click="toggleProfile" class="flex items-center space-x-2 text-gray-600 hover:text-teal-500">
                                 <div class="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center">
