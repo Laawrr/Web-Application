@@ -21,7 +21,7 @@
                     </template>
 
                     <template v-else>
-                        <Link :href="route('dashboard')" class="text-gray-600 hover:text-teal-500">NewsFeed</Link>
+                        <Link href="/newsfeed" class="text-gray-600 hover:text-teal-500">Feed</Link>
 
                         <Link :href="route('dashboard')" class="text-gray-600 hover:text-teal-500">Dashboard</Link>
 

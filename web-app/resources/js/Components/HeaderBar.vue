@@ -9,6 +9,9 @@
 
                 <div class="flex items-center space-x-6">
                     <Link href="/" class="text-gray-600 hover:text-teal-500">Home</Link>
+                    <Link href="/newsfeed" class="text-gray-600 hover:text-teal-500"><strong>Feed</strong> </Link>
+
+                    <Link :href="route('dashboard')" class="text-gray-600 hover:text-teal-500">Dashboard</Link>
 
                     <!-- Import Notification Component -->
                     <Notification ref="notificationRef" @dropdown-toggled="handleNotificationToggle" />
@@ -100,77 +103,9 @@ nav a:hover {
     text-decoration: none;  /* Remove underline on hover */
 }
 
-nav .text-teal-500 {
-    transition: all 0.3s ease;
-}
-
-nav .text-teal-500:hover {
-    color: #004d40; /* Darker teal for hover */
-}
-
-nav .text-gray-800 {
-    font-weight: bold;
-}
-
-nav .text-gray-600 {
-    color: #4a4a4a;
-}
-
-nav .hover\:text-teal-500:hover {
-    color: #00695c; /* Hover effect for teal links */
-}
-
-/* Dropdown styles */
-.dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    padding: 8px 0;
-}
-
-.dropdown a {
-    padding: 8px 16px;
-    color: #333;
-    text-decoration: none;
-}
-
-.dropdown a:hover {
-    background-color: #e5f4f4;
-}
-
-.dropdown button {
-    padding: 8px 16px;
-    width: 100%;
-    text-align: left;
-}
-
-.transition-all {
-    transition: all 0.3s ease-in-out;
-}
-
-.sticky {
-    position: sticky;
-    top: 0;
-    z-index: 999;
-}
-
-/* Search bar */
-input[type="text"] {
-    border-radius: 9999px;
-    border: 1px solid #d1d5db;
-    transition: border-color 0.2s;
-}
-
-input[type="text"]:focus {
-    border-color: #38b2ac;
-    outline: none;
-}
-
+/* Media query for responsive design */
 @media (max-width: 768px) {
-    .md\\:block {
+    .hidden-mobile {
         display: none;
     }
 }
