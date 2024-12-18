@@ -67,7 +67,10 @@
 
               <!-- List of Comments -->
               <div v-for="comment in item.comments" :key="comment.id" class="bg-gray-100 p-2 rounded-lg mb-2">
-                <p class="text-gray-700">{{ comment.text }}</p>
+                <div class="flex items-center space-x-2">
+                  <span class="font-semibold text-gray-800">{{ comment.userName }}</span>
+                  <p class="text-gray-700">{{ comment.text }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -79,6 +82,7 @@
     <FooterBar />
   </div>
 </template>
+
 
 <script>
 import { ref, onMounted } from "vue";
@@ -93,7 +97,20 @@ export default {
     const lostItems = ref([]);
     const loading = ref(true);
     const newComments = ref({});
+    const userName = ref(""); // Store the user's name here
 
+    // Fetch the current user's name
+    const fetchUser = async () => {
+      try {
+        const response = await axios.get("/user"); // Assuming the endpoint to fetch user details
+        userName.value = response.data.name; // Update userName with the response
+        console.log("User fetched:", userName.value);
+      } catch (error) {
+        console.error("Error fetching user data:", error.message);
+      }
+    };
+
+    // Fetch posts (lost and found items)
     const fetchPosts = async () => {
       try {
         const [lost, found] = await Promise.all([
@@ -115,7 +132,7 @@ export default {
         }));
 
         lostItems.value = [...lostPosts, ...foundPosts];
-        fetchComments();
+        fetchComments(); // Fetch comments after posts are fetched
       } catch (error) {
         console.error("Error fetching posts:", error.message);
       } finally {
@@ -123,6 +140,7 @@ export default {
       }
     };
 
+    // Fetch comments for each post
     const fetchComments = async () => {
       console.log("Fetching comments for all items...");
 
@@ -130,14 +148,16 @@ export default {
         console.log(`Fetching comments for item with ID: ${item.id}, type: ${item.isFound ? 'found' : 'lost'}`);
 
         try {
-          // Modify the URL to match the new route
           const itemType = item.isFound ? 'found' : 'lost';
           const response = await axios.get(`/comments/${itemType}/${item.id}`);
 
           console.log(`Comments fetched for item ${item.id}:`, response.data.comments);
 
-          // Update the item's comments
-          item.comments = response.data.comments;
+          // Include user name for each comment
+          item.comments = response.data.comments.map(comment => ({
+            ...comment,
+            userName: comment.user.name, // Assuming the API response includes user data
+          }));
         } catch (error) {
           console.error(`Error fetching comments for item ${item.id}:`, error.message);
         }
@@ -146,11 +166,13 @@ export default {
       console.log("Finished fetching comments for all items.");
     };
 
+    // Toggle the visibility of the comment section
     const toggleCommentSection = (id) => {
       const item = lostItems.value.find((item) => item.id === id);
       if (item) item.showCommentSection = !item.showCommentSection;
     };
 
+    // Submit a new comment
     const submitComment = async (id, type) => {
       const text = newComments.value[id]?.trim();
       console.log("Attempting to submit comment", { id, type, text });
@@ -166,13 +188,17 @@ export default {
           item_id: id,
           item_type: type,
           text,
+          user_name: userName.value, // Use the fetched user name
         });
 
         console.log("Response received:", response.data);
 
         const item = lostItems.value.find((item) => item.id === id);
         if (item) {
-          item.comments.push(response.data.comment);
+          item.comments.push({
+            ...response.data.comment,
+            userName: userName.value, // Add the user name to the new comment
+          });
           console.log("Updated comments for item:", item);
         }
 
@@ -183,19 +209,24 @@ export default {
       }
     };
 
-
+    // Format the date to display it in a readable format
     const formatDate = (date) => new Date(date).toLocaleDateString(undefined, {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
 
-    onMounted(fetchPosts);
+    // Fetch the posts and user data when the component is mounted
+    onMounted(() => {
+      fetchUser();  // Fetch the current user first
+      fetchPosts(); // Then fetch the posts
+    });
 
-    return { lostItems, loading, newComments, toggleCommentSection, submitComment, formatDate };
+    return { lostItems, loading, newComments, toggleCommentSection, submitComment, formatDate, userName };
   },
 };
 </script>
+
 
 <style scoped>
 /* Simplified for clarity */
