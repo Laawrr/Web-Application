@@ -224,23 +224,27 @@ export default {
     },
 
     async addUser() {
-  if (!this.newUser.name || !this.newUser.email || !this.newUser.role || !this.newUser.password) {
-    alert('Please fill in all required fields.');
-    return;
-  }
+      if (!this.newUser.name || !this.newUser.email || !this.newUser.role || !this.newUser.password) {
+        alert('Please fill in all required fields.');
+        return;
+      }
 
-  try {
-    await axios.post('/admin/users', this.newUser);
-    await this.fetchUsers();  // Wait until the users are fetched after the user is created
-    this.showAddDialog = false;
-    this.newUser = { name: '', email: '', password: '', role: null }; // Reset the form
-    alert('User added successfully!');
-  } catch (error) {
-    console.error('Error adding user:', error);
-    alert(error.response?.data?.message || 'Failed to add user. Please try again.');
-  }
-},
+      try {
+        console.log('Adding user:', this.newUser);
+        const response = await axios.post('/users', this.newUser);
 
+        // Add the new user directly to the list
+        this.users.unshift(response.data.user);
+        this.fetchUsers(); // Optionally fetch to sync with the backend
+        this.showAddDialog = false;
+        this.newUser = { name: '', email: '', password: '', role: null }; // Reset the form
+        alert('User added successfully!');
+      } catch (error) {
+        console.error('Error adding user:', error.response || error);
+        const errorMessage = error.response?.data?.message || 'Failed to add user. Please try again.';
+        alert(errorMessage);
+      }
+    },
 
     editUser(user) {
       this.editedUser = { ...user };

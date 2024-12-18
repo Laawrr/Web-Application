@@ -76,7 +76,7 @@ export default {
         labels: ['Lost Items', 'Found Items', 'Claims'],
         datasets: [{
           label: 'Item Statistics',
-          data: [2, 1, 0],
+          data: [0, 0, 0],  // Initial data, will be updated on fetch
           backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
           hoverOffset: 4
         }]
@@ -85,7 +85,7 @@ export default {
         labels: ['Lost Items', 'Found Items', 'Claims'],
         datasets: [{
           label: 'Item Overview',
-          data: [2, 1, 0],
+          data: [0, 0, 0],  // Initial data, will be updated on fetch
           backgroundColor: '#42A5F5',
           borderColor: '#1E88E5',
           borderWidth: 1
@@ -100,24 +100,14 @@ export default {
     stats: {
       handler(newStats) {
         console.log('Stats updated:', newStats);
+        // Update chart data
         this.pieChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
         this.barChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
+        // Force charts to update
         this.$nextTick(() => {
           this.$refs.pieChart.chart.update();
           this.$refs.barChart.chart.update();
         });
-      },
-      deep: true
-    },
-    pieChartData: {
-      handler(newData) {
-        console.log('Pie chart data updated:', newData);
-      },
-      deep: true
-    },
-    barChartData: {
-      handler(newData) {
-        console.log('Bar chart data updated:', newData);
       },
       deep: true
     }
@@ -131,12 +121,15 @@ export default {
         }
         const data = await response.json();
         
+        // Update the stats and charts
         this.stats = {
           totalUsers: data.totalUsers,
           lostItems: data.lostItems,
           foundItems: data.foundItems,
           claims: data.claims,
         };
+        
+        // Update pie and bar chart data
         this.pieChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
         this.barChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
         

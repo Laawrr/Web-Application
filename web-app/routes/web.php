@@ -11,6 +11,7 @@ use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\MarkerController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\CommentController;
+use App\Http\Middleware\CheckRole;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,7 @@ Route::get('/user-id', [UserController::class, 'getID'])->name('user.id');
 Route::post('/log-activity', [ActivityLogController::class, 'logUserActivity']);
 
 // Claims Routes
+Route::get('/claims', [ClaimController::class, 'index']);
 Route::post('/claims', [ClaimController::class, 'store']);
 Route::put('/claims/{id}', [ClaimController::class, 'update']);
 Route::get('/claims/{id}', [ClaimController::class, 'show']);
@@ -63,7 +65,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // Admin Routes
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware([CheckRole::class . ':admin'])->group(function () {
     Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
