@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Models\Notification;
 
-
 class CommentController extends Controller
 {
     // Store a comment
@@ -43,18 +42,19 @@ class CommentController extends Controller
             // Add logging to verify item found
             Log::info('Item found', ['item' => $item]);
 
-            $comment = Comment::create([
+            // Create the comment with proper polymorphic relationship
+            $comment = new Comment([
                 'user_id' => auth()->id(),
-                'text' => $request->text,
-                'commentable_id' => $request->item_id,
-                'commentable_type' => $request->item_type === 'lost' ? 'App\\Models\\LostItem' : 'App\\Models\\FoundItem'
+                'text' => $request->text
             ]);
+            
+            // Associate the comment with the item
+            $item->comments()->save($comment);
 
             // Load the user relationship for the response
             $comment->load('user:id,name');
 
             // Create notification for the item owner
-            $item = $model::with('user')->findOrFail($request->item_id);
             if ($item->user_id !== auth()->id()) {
                 Notification::create([
                     'type' => 'new_comment',
@@ -71,8 +71,11 @@ class CommentController extends Controller
 
             return response()->json(['success' => true, 'comment' => $comment], 201);
         } catch (\Exception $e) {
-            Log::error('Error in storing comment', ['exception' => $e->getMessage()]);
-            return response()->json(['error' => 'Internal Server Error'], 500);
+            Log::error('Error in storing comment', [
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Internal Server Error', 'message' => $e->getMessage()], 500);
         }
     }
     
@@ -80,19 +83,53 @@ class CommentController extends Controller
     public function index($item_type, $item_id)
     {
         try {
+            Log::info('Fetching comments', [
+                'item_type' => $item_type,
+                'item_id' => $item_id
+            ]);
+
             // Determine the model based on item_type
             $model = $item_type === 'lost' ? LostItem::class : FoundItem::class;
 
             // Find the item
             $item = $model::findOrFail($item_id);
 
-            // Fetch comments with pagination, include user information
-            $comments = $item->comments()->with('user:id,name')->paginate(10);
+            // Fetch comments with pagination and eager load user relationship
+            $comments = $item->comments()
+                ->with('user:id,name')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($comment) {
+                    return [
+                        'id' => $comment->id,
+                        'text' => $comment->text,
+                        'user' => [
+                            'id' => $comment->user->id,
+                            'name' => $comment->user->name
+                        ],
+                        'created_at' => $comment->created_at,
+                        'updated_at' => $comment->updated_at
+                    ];
+                });
 
-            return response()->json(['comments' => $comments]);
+            Log::info('Comments fetched successfully', [
+                'count' => $comments->count(),
+                'first_comment' => $comments->first()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'comments' => $comments
+            ]);
         } catch (\Exception $e) {
-            Log::error('Error in fetching comments for item', ['exception' => $e->getMessage()]);
-            return response()->json(['error' => 'Internal Server Error'], 500);
+            Log::error('Error in fetching comments for item', [
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'error' => 'Internal Server Error',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
