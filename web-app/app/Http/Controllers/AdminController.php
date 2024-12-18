@@ -11,6 +11,7 @@ use App\Models\Claim;
 use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Auth; // Import for authentication
 use Illuminate\Support\Facades\Hash; // Import for password hashing
+use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
@@ -82,7 +83,7 @@ class AdminController extends Controller
             'password' => 'required|string|min:8',
             'role' => 'required|string|in:admin,user',
         ]);
-
+    
         try {
             // Create New User
             $user = User::create([
@@ -91,16 +92,26 @@ class AdminController extends Controller
                 'password' => Hash::make($validated['password']),
                 'role' => $validated['role'],
             ]);
-
-            // No manual logging needed since the trigger handles this.
-
+    
+            // Log the action after user creation
+            if (Auth::check()) {
+                $action = 'User created: ' . $user->name;
+                ActivityLog::create([
+                    'user_id' => Auth::id(),  // This will log the current authenticated user's ID
+                    'action' => $action,
+                    'action_time' => now(),
+                    'ip_address' => request()->getClientIp(),
+                    'user_agent' => request()->header('User-Agent'),
+                ]);
+            }
+    
             return response()->json([
                 'message' => 'User created successfully',
                 'user' => $user,
             ], 201);
         } catch (\Exception $e) {
             Log::error('User Creation Failed: ' . $e->getMessage());
-
+    
             return response()->json([
                 'error' => 'Failed to create user. Please try again.',
             ], 500);
