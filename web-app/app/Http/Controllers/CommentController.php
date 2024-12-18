@@ -43,10 +43,15 @@ class CommentController extends Controller
             // Add logging to verify item found
             Log::info('Item found', ['item' => $item]);
 
-            $comment = $item->comments()->create([
+            $comment = Comment::create([
                 'user_id' => auth()->id(),
                 'text' => $request->text,
+                'commentable_id' => $request->item_id,
+                'commentable_type' => $request->item_type === 'lost' ? 'App\\Models\\LostItem' : 'App\\Models\\FoundItem'
             ]);
+
+            // Load the user relationship for the response
+            $comment->load('user:id,name');
 
             return response()->json(['success' => true, 'comment' => $comment], 201);
         } catch (\Exception $e) {
