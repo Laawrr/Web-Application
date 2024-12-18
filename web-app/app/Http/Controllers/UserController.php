@@ -19,16 +19,6 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $user = User::create($request->all());
-
-        // Log user creation
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'User created: ' . $user->name,
-            'action_time' => now(),
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->header('User-Agent'),
-        ]);
-
         return response()->json($user, 201);
     }
 
@@ -36,16 +26,6 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
         $user->update($request->all());
-
-        // Log user update
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'User updated: ' . $user->name,
-            'action_time' => now(),
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->header('User-Agent'),
-        ]);
-
         return response()->json($user);
     }
 
@@ -53,17 +33,6 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
         $user->delete();
-
-        // Log user deletion
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'User deleted: ' . $user->name,
-            'action_time' => now(),
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->header('User-Agent'),
-        ]);
-
-        return response()->json(null, 204);
     }
     public function getID(){
         $userID = Auth::id();
