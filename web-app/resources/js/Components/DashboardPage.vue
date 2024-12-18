@@ -26,6 +26,10 @@
         <!-- Post Detail Modal -->
         <div v-if="showPostModal" class="post-modal__overlay" @click="closePostModal">
           <div class="post-modal__content" @click.stop>
+            <button @click="closePostModal" class="post-modal__close-btn">
+              <span>&times;</span>
+            </button>
+            
             <h2 class="post-modal__title">Item Details</h2>
 
             <img v-if="currentPost.image_url" :src="currentPost.image_url" alt="Item Image" class="post-modal__image" />
@@ -41,20 +45,18 @@
 
             <!-- Edit Button -->
             <button @click="openEditModal" class="post-modal__edit-btn">Edit</button>
-
-          n>
           </div>
         </div>
 
        <!-- Edit Modal -->
        <div v-if="showEditModal" class="edit-modal__overlay" @click="closeEditModal">
-  <div class="edit-modal__content" @click.stop>
-    <h2 class="edit-modal__title">Edit Item</h2>
+        <div class="edit-modal__content" @click.stop>
+          <h2 class="edit-modal__title">Edit Item</h2>
 
-    <form @submit.prevent="submitEditForm">
-      <div class="form-group">
-        <label for="editItemName">Item Name</label>
-        <input type="text" id="editItemName" v-model="currentPost.item_name" required />
+          <form @submit.prevent="submitEditForm">
+            <div class="form-group">
+              <label for="editItemName">Item Name</label>
+              <input type="text" id="editItemName" v-model="currentPost.item_name" required />
       </div>
 
       <!-- Category Dropdown -->
@@ -90,7 +92,7 @@
       <!-- Image Upload Section -->
       <div class="form-group">
         <label for="editImage">Upload New Image</label>
-        <input type="file" id="editImage" @change="handleImageUpload" accept="image/*" />
+        <input type="file" id="editImage" @change="handleEditImageUpload" accept="image/*" />
       </div>
 
       <!-- Image Preview Section (optional) -->
@@ -262,6 +264,13 @@ export default {
       showPostModal: false,
       showEditModal: false,
       currentPost: {},
+      snackbar: {
+        show: false,
+        message: '',
+        color: 'success'
+      },
+      imagePreviewUrl: null,
+      selectedImage: null,
     };
   },
   created() {
@@ -530,16 +539,81 @@ export default {
     closeEditModal() {
       this.showEditModal = false;
     },
-    submitEditForm() {
-      // Handle the form submission logic for editing a post
-      this.showEditModal = false;
-      this.showSuccess("Post updated successfully!");
+    handleEditImageUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        this.selectedImage = file;
+        this.imagePreviewUrl = URL.createObjectURL(file);
+      }
     },
+    clearImagePreview() {
+      this.imagePreviewUrl = null;
+      this.selectedImage = null;
+    },
+    async submitEditForm() {
+      try {
+        this.isSubmitting = true;
 
-    // Display success message (you can customize this)
-    showSuccess(message) {
-      alert(message); // Simple alert for now, or use a custom notification system
-    }
+        // Create FormData to handle file upload
+        const formData = new FormData();
+        formData.append('item_name', this.currentPost.item_name);
+        formData.append('category', this.currentPost.category);
+        formData.append('description', this.currentPost.description);
+        formData.append('facebook_link', this.currentPost.facebook_link || '');
+        formData.append('contact_number', this.currentPost.contact_number);
+
+        // Append image if selected
+        if (this.selectedImage) {
+          formData.append('image_url', this.selectedImage);
+        }
+
+        // Make the API call to update the post
+        const response = await axios.post(`/lost-items/${this.currentPost.id}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          params: {
+            _method: 'PUT' // Laravel will treat this as PUT request
+          }
+        });
+
+        if (response.status === 200) {
+          // Update the local post data
+          const postIndex = this.posts.findIndex(post => post.id === this.currentPost.id);
+          if (postIndex !== -1) {
+            this.posts[postIndex] = { ...this.posts[postIndex], ...response.data.data };
+          }
+
+          // Show success message
+          this.showSuccess('Post updated successfully!');
+
+          // Clear image preview
+          this.clearImagePreview();
+
+          // Close the edit modal
+          this.closeEditModal();
+
+          // Refresh the posts list
+          await this.fetchPosts();
+        }
+      } catch (error) {
+        console.error('Error updating post:', error);
+        let errorMessage = 'Failed to update post. Please try again.';
+        
+        if (error.response) {
+          if (error.response.status === 404) {
+            errorMessage = 'Post not found.';
+          } else if (error.response.status === 422) {
+            const validationErrors = error.response.data.errors;
+            errorMessage = Object.values(validationErrors).flat().join('\n');
+          }
+        }
+        
+        this.showError(errorMessage);
+      } finally {
+        this.isSubmitting = false;
+      }
+    },
   } 
 };
 </script>
@@ -771,56 +845,30 @@ export default {
 /* ======== Close Button ======== */
 .post-modal__close-btn {
   position: absolute;
-  top: 15px; /* Keeps it close to the top */
-  right: 15px; /* Keeps it close to the right edge */
-  background: #ff6f61; /* A softer shade of red */
+  top: 10px; /* Keeps it close to the top */
+  right: 10px; /* Keeps it close to the right edge */
+  background: #ff4b5c; /* A softer shade of red */
   color: #fff;
   border: none;
-  border-radius: 8px; /* Rounded corners for a modern look */
-  padding: 10px 20px; /* Adjusted padding for a rectangular shape */
-  font-size: 1rem; /* Adjusted font size */
-  font-weight: bold;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+  z-index: 1000;
 }
 
 .post-modal__close-btn:hover {
-  background: #ff4b5c; /* Darker red on hover */
-  transform: translateY(-2px); /* Slight upward movement on hover */
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
+  background: #ff3545; /* Darker red on hover */
 }
 
-.post-modal__close-btn:focus {
-  outline: none; /* Removes the default focus outline */
-  border: 2px solid #ff4b5c; /* Adds a subtle border on focus */
-}
-
-
-/* ======== Animations ======== */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateY(-20px);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+.post-modal__close-btn span {
+  line-height: 1;
+  margin-bottom: 2px;
 }
 
 .dashboard-header {
@@ -1145,6 +1193,7 @@ export default {
   height: 20px;
   border: 3px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
+  /* This makes the spinner round */
   border-top-color: #fff;
   animation: spin 1s ease-in-out infinite;
 }
@@ -1194,7 +1243,7 @@ export default {
   color: white;
   border: none;
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1209,7 +1258,7 @@ export default {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: rgba(255, 0, 0, 0.7);
+  background-color: rgba(255, 0, 0, 0.7);
   color: white;
   border: none;
   cursor: pointer;
