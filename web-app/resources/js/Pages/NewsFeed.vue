@@ -2,7 +2,7 @@
   <div class="flex flex-col min-h-screen bg-gray-100">
     <!-- Header -->
     <HeaderBar class="w-full shadow-md bg-white" />
-
+<h1>aosidj</h1>
     <!-- Main Content -->
     <div class="flex-grow max-w-5xl mx-auto py-12 px-4 md:px-8">
       <!-- Title -->
