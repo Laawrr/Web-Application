@@ -64,11 +64,25 @@ export default {
       endX: null,
       _lastPinchDist: null,
       initialLocationSet: false,
+      searchResults: [],
+      searchMarker: null,
+      // Caraga region boundaries (refined)
+      caragaBounds: {
+        north: 9.8500, // Surigao del Norte
+        south: 7.8500, // Agusan del Sur
+        east: 126.5000, // Eastern coast
+        west: 125.0500  // Western boundary
+      },
+      selectedLocation: {
+        lat: null,
+        lng: null
+      }
     };
   },
   mounted() {
     this.$nextTick(() => {
       this.initializeMap();
+      this.getCurrentLocation();
     });
   },
   methods: {
@@ -86,6 +100,12 @@ export default {
       this.isLoading = true;
 
       try {
+        // Create bounds for Caraga region
+        const bounds = L.latLngBounds(
+          L.latLng(this.caragaBounds.south, this.caragaBounds.west),
+          L.latLng(this.caragaBounds.north, this.caragaBounds.east)
+        );
+
         this.map = L.map(mapContainer, {
           zoomControl: true,
           zoomAnimation: true,
@@ -98,7 +118,9 @@ export default {
           tap: !L.Browser.mobile,
           bounceAtZoomLimits: true,
           maxZoom: 18,
-          minZoom: 3
+          minZoom: 9, // Restrict minimum zoom to keep focus on Caraga
+          maxBounds: bounds,
+          maxBoundsViscosity: 1.0 // Make the bounds completely rigid
         });
 
         // Add zoom control with custom position
@@ -112,106 +134,212 @@ export default {
           position: 'bottomleft'
         }).addTo(this.map);
 
+        // Add the tile layer
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "OpenStreetMap contributors",
           maxZoom: 18,
+          minZoom: 9,
+          bounds: bounds,
           tileSize: 512,
           zoomOffset: -1
         }).addTo(this.map);
 
-        // Handle touch events directly on the map element
-        const mapElement = this.$refs.mapRef;
-        let startTouch = null;
-        let currentTouch = null;
+        // Add a rectangle to highlight Caraga region
+        const caragaRectangle = L.rectangle(bounds, {
+          color: "#FF5722",
+          weight: 2,
+          fill: true,
+          fillColor: '#000',
+          fillOpacity: 0.1,
+          dashArray: '5, 10'
+        }).addTo(this.map);
 
-        mapElement.addEventListener('touchstart', (e) => {
-          startTouch = e.touches[0];
-        }, { passive: true });
+        // Create overlay rectangles to dim areas outside Caraga
+        const topRect = L.rectangle(
+          [
+            [90, -180],
+            [this.caragaBounds.north, 180]
+          ],
+          { color: '#000', fillOpacity: 0.3, stroke: false }
+        ).addTo(this.map);
 
-        mapElement.addEventListener('touchmove', (e) => {
-          if (!startTouch) return;
-          currentTouch = e.touches[0];
-          
-          // Calculate the distance moved
-          const deltaX = currentTouch.clientX - startTouch.clientX;
-          const deltaY = currentTouch.clientY - startTouch.clientY;
-          
-          // Pan the map
-          this.map.panBy([-deltaX, -deltaY]);
-          
-          // Update the start position
-          startTouch = currentTouch;
-        }, { passive: true });
+        const bottomRect = L.rectangle(
+          [
+            [this.caragaBounds.south, -180],
+            [-90, 180]
+          ],
+          { color: '#000', fillOpacity: 0.3, stroke: false }
+        ).addTo(this.map);
 
-        mapElement.addEventListener('touchend', () => {
-          startTouch = null;
-          currentTouch = null;
-        }, { passive: true });
+        const leftRect = L.rectangle(
+          [
+            [this.caragaBounds.south, -180],
+            [this.caragaBounds.north, this.caragaBounds.west]
+          ],
+          { color: '#000', fillOpacity: 0.3, stroke: false }
+        ).addTo(this.map);
 
-        // Handle pinch zoom using hammer.js if available
-        if (typeof Hammer !== 'undefined') {
-          const hammer = new Hammer(mapElement);
-          hammer.get('pinch').set({ enable: true });
-          
-          hammer.on('pinch', (e) => {
-            const delta = e.scale > 1 ? 1 : -1;
-            this.map.setZoom(this.map.getZoom() + delta);
-          });
-        }
+        const rightRect = L.rectangle(
+          [
+            [this.caragaBounds.south, this.caragaBounds.east],
+            [this.caragaBounds.north, 180]
+          ],
+          { color: '#000', fillOpacity: 0.3, stroke: false }
+        ).addTo(this.map);
 
-        // Set a default view immediately
-        this.map.setView([14.5995, 120.9842], 13); // Manila coordinates
+        // Set initial view to center of Caraga
+        const caragaCenter = [
+          (this.caragaBounds.north + this.caragaBounds.south) / 2,
+          (this.caragaBounds.east + this.caragaBounds.west) / 2
+        ];
+        
+        this.map.setView(caragaCenter, 10);
+        this.map.setMaxBounds(bounds);
+
+        // Prevent dragging outside bounds
+        this.map.on('drag', () => {
+          this.map.panInsideBounds(bounds, { animate: false });
+        });
 
         // Add click handler for marking locations
         this.map.on("click", (e) => {
-          if (this.disabled) return;
+          const clickedPoint = e.latlng;
+          
+          // Check if click is within Caraga bounds
+          if (bounds.contains(clickedPoint)) {
+            if (this.currentMarker) {
+              this.map.removeLayer(this.currentMarker);
+            }
 
-          const latlng = e.latlng;
+            // Round coordinates to 6 decimal places for precision
+            const lat = Number(clickedPoint.lat.toFixed(6));
+            const lng = Number(clickedPoint.lng.toFixed(6));
 
-          if (this.currentMarker) {
-            this.map.removeLayer(this.currentMarker);
+            this.selectedLocation = { lat, lng };
+            this.selectedLatLng = clickedPoint;
+
+            // Create custom icon for the marker
+            const markerIcon = L.divIcon({
+              className: 'custom-marker',
+              html: `<div class="marker-pin"></div>`,
+              iconSize: [30, 30],
+              iconAnchor: [15, 30]
+            });
+
+            // Add marker with popup showing coordinates
+            this.currentMarker = L.marker(clickedPoint, {
+              icon: markerIcon
+            }).addTo(this.map);
+
+            // Create popup content with coordinates
+            const popupContent = `
+              <div class="coordinate-popup">
+                <strong>Selected Location:</strong><br>
+                Latitude: ${lat}<br>
+                Longitude: ${lng}
+              </div>
+            `;
+
+            // Bind popup to marker and open it
+            this.currentMarker.bindPopup(popupContent).openPopup();
+
+            // Emit the selected coordinates
+            this.$emit('location-selected', { lat, lng });
           }
-
-          const pinIcon = L.divIcon({
-            html: '<i class="fas fa-map-marker-alt"></i>',
-            className: "custom-pin-marker",
-            iconSize: [30, 30],
-            iconAnchor: [15, 30],
-          });
-
-          this.currentMarker = L.marker(latlng, {
-            icon: pinIcon,
-          }).addTo(this.map);
-
-          this.selectedLatLng = latlng;
-          
-          // Emit the selected location to the parent component
-          this.$emit("location-selected", {
-            lat: latlng.lat,
-            lng: latlng.lng
-          });
-          
-          // Show coordinates in a popup
-          this.currentMarker.bindPopup(
-            `<b>Selected Location</b>`
-          ).openPopup();
         });
-
-        // Get current location
-        this.getCurrentLocation();
 
         this.map.whenReady(() => {
           this.isLoading = false;
         });
-
-        setTimeout(() => {
-          this.map.invalidateSize();
-        }, 250);
-
       } catch (error) {
-        console.error('Error initializing map:', error);
-        this.showSnackbar('Error initializing map. Please refresh the page.', 'error');
+        console.error("Error initializing map:", error);
+        this.showSnackbar("Error initializing map. Please refresh the page.", "error");
         this.isLoading = false;
+      }
+    },
+    async searchLocation() {
+      if (!this.searchQuery.trim()) return;
+
+      this.loadingSearch = true;
+      try {
+        // Use Nominatim API for geocoding with Caraga region viewbox
+        const response = await axios.get(
+          `https://nominatim.openstreetmap.org/search`,
+          {
+            params: {
+              q: this.searchQuery + ', Caraga, Philippines',
+              format: 'json',
+              limit: 5,
+              addressdetails: 1,
+              viewbox: `${this.caragaBounds.west},${this.caragaBounds.north},${this.caragaBounds.east},${this.caragaBounds.south}`,
+              bounded: 1
+            },
+            headers: {
+              'Accept-Language': 'en'
+            }
+          }
+        );
+
+        this.searchResults = response.data.filter(result => {
+          const lat = parseFloat(result.lat);
+          const lon = parseFloat(result.lon);
+          
+          // Check if result is within Caraga bounds
+          return lat >= this.caragaBounds.south && 
+                 lat <= this.caragaBounds.north && 
+                 lon >= this.caragaBounds.west && 
+                 lon <= this.caragaBounds.east &&
+                 result.display_name.toLowerCase().includes('caraga');
+        });
+
+        if (this.searchResults.length > 0) {
+          const firstResult = this.searchResults[0];
+          const lat = parseFloat(firstResult.lat);
+          const lon = parseFloat(firstResult.lon);
+
+          // Remove previous search marker if exists
+          if (this.searchMarker) {
+            this.map.removeLayer(this.searchMarker);
+          }
+
+          // Create custom icon for search result
+          const searchIcon = L.divIcon({
+            className: 'search-location-marker',
+            html: '<div class="search-marker-pin"></div><div class="search-marker-pulse"></div>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30]
+          });
+
+          // Add new marker
+          this.searchMarker = L.marker([lat, lon], {
+            icon: searchIcon
+          }).addTo(this.map);
+
+          // Create popup content with location details
+          const popupContent = `
+            <div class="search-popup">
+              <h3>${firstResult.display_name.split(',')[0]}</h3>
+              <p>${firstResult.display_name}</p>
+            </div>
+          `;
+
+          this.searchMarker.bindPopup(popupContent).openPopup();
+
+          // Fly to location with animation
+          this.map.flyTo([lat, lon], 16, {
+            duration: 1.5,
+            easeLinearity: 0.25
+          });
+
+          this.showSnackbar("Location found in Caraga region!", "success");
+        } else {
+          this.showSnackbar("No results found in Caraga region. Please try another location.", "warning");
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+        this.showSnackbar("Error searching for location. Please try again.", "error");
+      } finally {
+        this.loadingSearch = false;
       }
     },
     getCurrentLocation() {
@@ -231,36 +359,60 @@ export default {
         (position) => {
           const { latitude, longitude } = position.coords;
           
-          // Update or create user location marker
-          if (this.userLocationMarker) {
-            this.userLocationMarker.setLatLng([latitude, longitude]);
+          // Check if location is within Caraga bounds
+          if (latitude >= this.caragaBounds.south && 
+              latitude <= this.caragaBounds.north && 
+              longitude >= this.caragaBounds.west && 
+              longitude <= this.caragaBounds.east) {
+            
+            // Update or create user location marker
+            if (this.userLocationMarker) {
+              this.userLocationMarker.setLatLng([latitude, longitude]);
+            } else {
+              // Create a custom icon for user location
+              const userIcon = L.divIcon({
+                className: 'user-location-marker',
+                html: `
+                  <div class="user-dot"></div>
+                  <div class="user-pulse"></div>
+                  <div class="user-heading"></div>
+                `,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+              });
+
+              this.userLocationMarker = L.marker([latitude, longitude], {
+                icon: userIcon,
+                zIndexOffset: 1000, // Keep marker on top
+                interactive: true
+              }).addTo(this.map);
+
+              // Add popup with coordinates
+              const popupContent = `
+                <div class="user-location-popup">
+                  <strong>Your Location</strong><br>
+                  Latitude: ${latitude.toFixed(6)}<br>
+                  Longitude: ${longitude.toFixed(6)}
+                </div>
+              `;
+              this.userLocationMarker.bindPopup(popupContent);
+            }
+
+            // Only set view on initial load
+            if (!this.initialLocationSet) {
+              this.map.setView([latitude, longitude], 15);
+              this.initialLocationSet = true;
+              this.showSnackbar("Location found!", "success");
+            }
           } else {
-            // Create a custom icon for user location
-            const userIcon = L.divIcon({
-              className: 'user-location-marker',
-              html: '<div class="marker-dot"></div><div class="marker-pulse"></div>',
-              iconSize: [20, 20],
-              iconAnchor: [10, 10]
-            });
-
-            this.userLocationMarker = L.marker([latitude, longitude], {
-              icon: userIcon,
-              zIndexOffset: 1000, // Keep marker on top
-              interactive: false // Prevent marker from being clickable
-            }).addTo(this.map);
-          }
-
-          // Only set view on initial load or when location changes significantly
-          if (!this.initialLocationSet) {
-            this.map.setView([latitude, longitude], 15);
-            this.initialLocationSet = true;
+            this.showSnackbar("You are outside the Caraga region.", "warning");
           }
         },
         (error) => {
           let message = "Unable to retrieve your location.";
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              message = "Location access was denied.";
+              message = "Location access was denied. Please enable location services.";
               break;
             case error.POSITION_UNAVAILABLE:
               message = "Location information is unavailable.";
@@ -278,32 +430,6 @@ export default {
       this.snackbar.message = message;
       this.snackbar.color = color;
       this.snackbar.visible = true;
-    },
-    searchLocation() {
-      if (!this.searchQuery) return this.showSnackbar("Please enter a valid location.", "error");
-
-      this.loadingSearch = true;
-      const apiUrl = `https://cors-anywhere.herokuapp.com/https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-        this.searchQuery
-      )}&limit=1`;
-
-      fetch(apiUrl)
-        .then((response) => response.json())
-        .then((data) => {
-          if (data && data.length > 0) {
-            const { lat, lon } = data[0];
-            this.map.setView([lat, lon], 15);
-          } else {
-            this.showSnackbar("Location not found.", "error");
-          }
-        })
-        .catch((error) => {
-          console.error("Error searching location:", error);
-          this.showSnackbar("Error searching location. Please try again.", "error");
-        })
-        .finally(() => {
-          this.loadingSearch = false;
-        });
     },
     handleTouchStart(event) {
       this.startX = event.touches[0].clientX;
@@ -342,6 +468,9 @@ export default {
       }
       if (this.userLocationMarker) {
         this.map.removeLayer(this.userLocationMarker);
+      }
+      if (this.searchMarker) {
+        this.map.removeLayer(this.searchMarker);
       }
       this.map.remove();
     }
@@ -481,10 +610,10 @@ export default {
   position: relative;
 }
 
-.marker-dot {
+.user-dot {
   width: 12px;
   height: 12px;
-  background-color: #4CAF50;
+  background-color: #2196F3;
   border: 2px solid white;
   border-radius: 50%;
   box-shadow: 0 0 4px rgba(0,0,0,0.3);
@@ -494,19 +623,32 @@ export default {
   transform: translate(-50%, -50%);
 }
 
-.marker-pulse {
+.user-pulse {
   width: 24px;
   height: 24px;
-  background-color: rgba(76, 175, 80, 0.3);
+  background-color: rgba(33, 150, 243, 0.3);
   border-radius: 50%;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  animation: pulse 2s infinite;
+  animation: user-pulse 2s infinite;
 }
 
-@keyframes pulse {
+.user-heading {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 10px solid #2196F3;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  display: none; /* Only show when device orientation is available */
+}
+
+@keyframes user-pulse {
   0% {
     transform: translate(-50%, -50%) scale(0.5);
     opacity: 1;
@@ -515,5 +657,145 @@ export default {
     transform: translate(-50%, -50%) scale(2);
     opacity: 0;
   }
+}
+
+.user-location-popup {
+  padding: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.user-location-popup strong {
+  color: #2196F3;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Search marker styles */
+.search-location-marker {
+  position: relative;
+}
+
+.search-marker-pin {
+  width: 20px;
+  height: 20px;
+  background-color: #FF5722;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.search-marker-pulse {
+  width: 40px;
+  height: 40px;
+  background-color: rgba(255, 87, 34, 0.3);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: search-pulse 2s infinite;
+}
+
+@keyframes search-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+/* Search popup styles */
+.search-popup {
+  padding: 8px;
+  max-width: 250px;
+}
+
+.search-popup h3 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+}
+
+.search-popup p {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* Loading indicator for search */
+.v-text-field.input-field.loading .v-input__slot::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ccc;
+  border-top-color: #1976D2;
+  border-radius: 50%;
+  animation: search-spin 0.8s linear infinite;
+}
+
+@keyframes search-spin {
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+/* Custom marker styles */
+.custom-marker {
+  position: relative;
+}
+
+.marker-pin {
+  width: 30px;
+  height: 30px;
+  background-color: #4CAF50;
+  border: 3px solid white;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.marker-pin:hover {
+  transform: rotate(-45deg) scale(1.1);
+}
+
+.marker-pin::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  background: white;
+  position: absolute;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Coordinate popup styles */
+.coordinate-popup {
+  padding: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.coordinate-popup strong {
+  color: #4CAF50;
+  display: block;
+  margin-bottom: 4px;
 }
 </style>
