@@ -23,8 +23,7 @@ class ClaimController extends Controller
 
         // Validate the request
         $validated = $request->validate([
-            'lost_item_id' => 'required|exists:lost_items,lost_item_id',
-            'found_item_id' => 'required|exists:found_items,found_item_id',
+            'item_id' => 'required|exists:found_items,item_id',
             'user_id' => 'required|exists:users,user_id',
             'claim_status' => 'required|in:Pending,Approved,Rejected',
             'submission_date' => 'required|date',
@@ -32,8 +31,7 @@ class ClaimController extends Controller
 
         // Create the claim
         $claim = Claim::create([
-            'lost_item_id' => $validated['lost_item_id'],
-            'found_item_id' => $validated['found_item_id'],
+            'item_id' => $validated['item_id'],
             'user_id' => $validated['user_id'],
             'claim_status' => $validated['claim_status'],
             'submission_date' => $validated['submission_date'],
@@ -42,7 +40,6 @@ class ClaimController extends Controller
 
         return response()->json($claim, 201);
     }
-
 
     public function update(Request $request, $id)
     {
@@ -85,11 +82,7 @@ class ClaimController extends Controller
         $itemType = $request->query('item_type');
 
         $item = null;
-        if ($itemType === 'lost') {
-            $item = LostItem::with('user')->find($itemId);
-        } else if ($itemType === 'found') {
-            $item = FoundItem::with('user')->find($itemId);
-        }
+        $item = FoundItem::with('user')->find($itemId);
 
         return Inertia::render('Claim', [
             'item' => $item,
