@@ -31,6 +31,6 @@ defineProps({
 });
 
 const handleImageError = (e) => {
-    e.target.src = '/img/placeholder.png'; // Replace with your placeholder image path
+    e.target.src = 'assets/proof/'; // Replace with your placeholder image path
 };
 </script>

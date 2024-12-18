@@ -153,6 +153,9 @@ const submitClaim = () => {
             imageFile.value = null;
 
             console.log("Form submission succeeded. Image preview and file reset.");
+
+            // Redirect to home page after successful submission using window.location.href
+            window.location.href = '/';
         },
         onError: (errors) => {
             console.error("Submission failed:", errors);
@@ -160,6 +163,7 @@ const submitClaim = () => {
         },
     });
 };
+
 
 
 

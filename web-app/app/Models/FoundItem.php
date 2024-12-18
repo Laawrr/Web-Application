@@ -23,7 +23,7 @@ class FoundItem extends Model
     }
     public function claim()
     {
-        return $this->hasOne(Claim::class, 'found_item_id');
+        return $this->hasOne(Claim::class, 'item_id');
     }
 
     public function comments()

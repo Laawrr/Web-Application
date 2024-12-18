@@ -75,8 +75,25 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import Proof from './Proof.vue';
+
+
+const items = ref([]);
+
+const fetchItems = async () => {
+    try {
+        const response = await fetch('/found-items');
+        const data = await response.json();
+        items.value = data;
+    } catch (error) {
+        console.error('Error fetching found items:', error);
+    }
+};
+
+onMounted(() => {
+    fetchItems();
+});
 
 const props = defineProps({
     item: {
