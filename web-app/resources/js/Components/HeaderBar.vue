@@ -1,5 +1,5 @@
 <template>
-    <nav class="sticky top-0 bg-white shadow-md z-50">
+    <nav class="sticky top-0 bg-white shadow-md">
         <div class="container mx-auto px-6 py-3">
             <div class="flex justify-between items-center">
               <div class="flex items-center space-x-3">
@@ -14,25 +14,23 @@
                     <Link :href="route('dashboard')" class="text-gray-600 hover:text-teal-500">Dashboard</Link>
 
                     <!-- Import Notification Component -->
-                    <div class="relative z-50">
-                        <Notification ref="notificationRef" @dropdown-toggled="handleNotificationToggle" />
-                    </div>
+                    <Notification ref="notificationRef" @dropdown-toggled="handleNotificationToggle" />
 
                     <!-- Profile Dropdown -->
-                    <div class="relative z-50" ref="profileDropdownRef">
-                        <button @click.stop="toggleProfileMenu" 
+                    <div class="relative">
+                        <button @click="toggleProfileMenu" 
                             class="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center hover:bg-teal-600 transition-colors">
                             {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
                         </button>
 
                         <!-- Dropdown Menu -->
-                        <div v-show="showProfileMenu" 
+                        <div v-if="showProfileMenu" 
                             class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                             <Link :href="route('profile.edit')" 
                                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                 Edit Profile
                             </Link>
-                            <button @click="handleSignOut"
+                            <button @click="showLoginModal = true"
                                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                 Sign Out
                             </button>
@@ -46,17 +44,15 @@
   
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link } from '@inertiajs/vue3';
 import Notification from './Notification.vue'; // Import the Notification component
   
 const showLoginModal = ref(false);
 const showProfileMenu = ref(false);
 const notificationRef = ref(null);
-const profileDropdownRef = ref(null);
 
 // Toggle profile menu and close notification
-const toggleProfileMenu = (event) => {
-    event.stopPropagation();
+const toggleProfileMenu = () => {
     showProfileMenu.value = !showProfileMenu.value;
     if (showProfileMenu.value && notificationRef.value) {
         notificationRef.value.closeDropdown();
@@ -70,14 +66,9 @@ const handleNotificationToggle = (isOpen) => {
     }
 };
 
-// Handle sign out
-const handleSignOut = () => {
-    router.post(route('logout'));
-};
-
 // Close dropdowns when clicking outside
 const closeDropdown = (e) => {
-    if (profileDropdownRef.value && !profileDropdownRef.value.contains(e.target)) {
+    if (!e.target.closest('.relative')) {
         showProfileMenu.value = false;
     }
 };
@@ -97,17 +88,6 @@ onUnmounted(() => {
 nav {
     background-color: #ffffff;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-    position: relative;
-    z-index: 40;
-}
-
-.relative {
-    position: relative;
-}
-
-/* Ensure dropdowns appear above other content */
-.absolute {
-    z-index: 50;
 }
 
 nav .container {
