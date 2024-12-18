@@ -11,17 +11,22 @@
 
         <!-- Featured Posts -->
         <section class="featured-posts">
-          <div v-if="filteredPosts.length === 0" class="no-posts">
-            <p>No posts found.</p>
-          </div>
-          <div v-for="post in filteredPosts" :key="post.id" class="card clickable" @click="openPostModal(post)">
-            <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image" />
-            <p class="post-date">{{ post.lost_date || post.found_date }}</p>
-            <p class="post-info"><strong>Status:</strong> {{ post.isFound ? 'Found' : 'Lost' }}</p>
-            <p class="post-info"><strong>Category:</strong> {{ post.category }}</p>
-            <p class="post-info"><strong>Description:</strong> {{ post.description }}</p>
-          </div>
-        </section>
+  <div v-if="filteredPosts.length === 0" class="no-posts">
+    <p>No posts found.</p>
+  </div>
+  
+  <div v-for="post in filteredPosts" :key="post.id" class="card clickable" @click="openPostModal(post)">
+    <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image" />
+    <p class="post-date">{{ post.lost_date || post.found_date }}</p>
+    <p class="post-info"><strong>Status:</strong> {{ post.isFound ? 'Found' : 'Lost' }}</p>
+    <p class="post-info"><strong>Category:</strong> {{ post.category }}</p>
+    <p class="post-info"><strong>Description:</strong> {{ post.description }}</p>
+
+    <!-- Delete button -->
+    <button @click.stop="deletePost(post.id)" class="delete-button">Delete</button>
+  </div>
+</section>
+
 
         <!-- Post Detail Modal -->
         <div v-if="showPostModal" class="post-modal__overlay" @click="closePostModal">
@@ -424,27 +429,34 @@ export default {
       this.enlargedImage = null;
     },
     async deletePost(postId) {
-      if (confirm("Are you sure you want to delete this post?")) {
-        try {
-          const post = this.posts.find((p) => p.id === postId);
-          if (post.user_id !== this.newItem.user_id) {
-            this.showError("You don't have permission to delete this post.");
-            return;
-          }
+  // Confirm the deletion action
+  const confirmDelete = confirm('Are you sure you want to delete this post?');
+  if (!confirmDelete) return;
 
-          const response = await axios.delete(`${window.deletePostUrl}/${postId}`, {
-            headers: {
-              "X-CSRF-TOKEN": document.head.querySelector('meta[name="csrf-token"]').content,
-            },
-          });
+  // Optimistic UI update: Remove the post from the UI immediately
+  const postToDelete = this.posts.find(post => post.id === postId);
+  const filteredPostToDelete = this.filteredPosts.find(post => post.id === postId);
 
-          this.showSuccess("Post deleted successfully.");
-          await this.fetchPosts();
-        } catch (error) {
-          this.showError("Error deleting post: " + error.message);
-        }
-      }
-    },
+  // Remove the post from posts and filteredPosts immediately
+  this.posts = this.posts.filter(post => post.id !== postId);
+  this.filteredPosts = this.filteredPosts.filter(post => post.id !== postId);
+
+  try {
+    // Send the DELETE request with the correct URL
+    const response = await axios.delete(`/found-items/${postId}`);  // This matches your route in web.php
+    
+    if (response.status === 200) {
+      // If successful, show the success message and do nothing since the post was already removed
+      alert('Post deleted successfully!');
+    } 
+  } catch (error) {
+    // If an error occurs, show the error and restore the post
+    console.error('Error deleting post:', error);
+    alert('An error occurred while deleting the post.');
+    this.posts.push(postToDelete);  // Restore the post to the posts array
+    this.filteredPosts.push(filteredPostToDelete);  // Restore the post to the filteredPosts array
+  }
+},
     enableLocationSelection() {
       this.mapEnabled = !this.mapEnabled;
     },
@@ -569,7 +581,7 @@ export default {
   color: #fff;
   border: none;
   border-radius: 50%;
-  width: 40px;
+  width: 50px;
   height: 40px;
   font-size: 1.2rem;
   font-weight: bold;
@@ -582,7 +594,6 @@ export default {
 
 .post-modal__close-btn:hover {
   background: #ff2c3c;
-  transform: rotate(90deg);
 }
 
 .post-modal__close-btn:active {
@@ -991,21 +1002,20 @@ export default {
   z-index: 100;
 }
 
-.delete-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(255, 0, 0, 0.7);
+.delete-button {
+  background-color: red;
   color: white;
   border: none;
+  padding: 5px 10px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  margin-top: 10px;
+  font-size: 14px;
 }
+
+.delete-button:hover {
+  background-color: darkred;
+}
+
 
 .enlarged-image {
   max-width: 90%;
@@ -1086,7 +1096,7 @@ export default {
   color: #fff;
   border: none;
   border-radius: 50%;
-  width: 40px;
+  width: 45px;
   height: 40px;
   font-size: 1.2rem;
   font-weight: bold;
