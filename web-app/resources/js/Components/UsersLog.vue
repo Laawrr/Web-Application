@@ -1,27 +1,14 @@
 <template>
   <v-container class="pa-6">
     <v-card class="mx-auto" max-width="1500">
-      <v-data-table
-        :headers="headers"
-        :items="filteredLogs"
-        :search="search"
-        :loading="loading"
-        :items-per-page="10"
-        class="elevation-1"
-        v-model:page="page"
-      >
+      <v-data-table :headers="headers" :items="filteredLogs" :search="search" :loading="loading" :items-per-page="10"
+        class="elevation-1" v-model:page="page">
         <template v-slot:top>
           <div class="pa-4">
             <div class="text-h5 text-center mb-4">Users Activity Log</div>
             <div class="d-flex justify-start">
-              <v-text-field
-                v-model="search"
-                append-icon="mdi-magnify"
-                label="Search"
-                single-line
-                hide-details
-                style="max-width: 300px;"
-              ></v-text-field>
+              <v-text-field v-model="search" append-icon="mdi-magnify" label="Search" single-line hide-details
+                style="max-width: 300px;"></v-text-field>
             </div>
           </div>
         </template>
@@ -57,37 +44,25 @@
 
         <template v-slot:item="{ item }">
           <tr>
-            <td>{{ item.user.name }}</td>
+            <td>{{ item.user ? item.user.name : 'Unknown' }}</td>
             <td>{{ item.action }}</td>
             <td>{{ formatDate(item.action_time) }}</td>
           </tr>
         </template>
 
         <template v-slot:progress>
-          <v-progress-linear
-            color="#4fb9af"
-            height="2"
-            indeterminate
-          ></v-progress-linear>
+          <v-progress-linear color="#4fb9af" height="2" indeterminate></v-progress-linear>
         </template>
 
         <template v-slot:bottom>
           <div class="d-flex align-center justify-center pa-4 gap-4">
-            <v-btn
-              style="background-color: #4fb9af; color: white; text-align: center"
-              variant="flat"
-              :disabled="page === 1"
-              @click="page--"
-            >
+            <v-btn style="background-color: #4fb9af; color: white; text-align: center" variant="flat"
+              :disabled="page === 1" @click="page--">
               Previous
             </v-btn>
             <span>Page {{ page }} of {{ Math.ceil(filteredLogs.length / 10) }}</span>
-            <v-btn
-              style="background-color: #4fb9af; color: white; text-align: center"
-              variant="flat"
-              :disabled="page >= Math.ceil(filteredLogs.length / 10)"
-              @click="page++"
-            >
+            <v-btn style="background-color: #4fb9af; color: white; text-align: center" variant="flat"
+              :disabled="page >= Math.ceil(filteredLogs.length / 10)" @click="page++">
               Next
             </v-btn>
           </div>
@@ -107,7 +82,7 @@ export default {
       search: '',
       page: 1,
       headers: [
-        { 
+        {
           text: 'User',
           value: 'user.name',
           width: '20%',
@@ -115,7 +90,7 @@ export default {
           sortable: true,
           filterable: true,
         },
-        { 
+        {
           text: 'Action',
           value: 'action',
           width: '40%',
@@ -123,7 +98,7 @@ export default {
           sortable: true,
           filterable: true,
         },
-        { 
+        {
           text: 'Time',
           value: 'action_time',
           width: '20%',
@@ -139,7 +114,7 @@ export default {
     filteredLogs() {
       if (!this.search) return this.logs;
       const searchTerm = this.search.toLowerCase();
-      return this.logs.filter(log => 
+      return this.logs.filter(log =>
         log.user.name.toLowerCase().includes(searchTerm) ||
         log.action.toLowerCase().includes(searchTerm) ||
         this.formatDate(log.action_time).toLowerCase().includes(searchTerm)
@@ -154,6 +129,7 @@ export default {
       this.loading = true;
       axios.get('/admin/users-log')
         .then(response => {
+          console.log(response.data); // Log the full response to check its structure
           this.logs = response.data.activityLog;
           this.loading = false;
           this.logs.sort((a, b) => new Date(b.action_time) - new Date(a.action_time));

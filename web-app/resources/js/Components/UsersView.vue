@@ -95,14 +95,8 @@
                   <v-text-field label="Password" v-model="newUser.password" type="password" required></v-text-field>
                 </v-col>
                 <v-col cols="12">
-                  <v-select
-                    label="Role"
-                    v-model="newUser.role"
-                    :items="roles"
-                    item-title="name"
-                    item-value="value"
-                    required
-                  ></v-select>
+                  <v-select label="Role" v-model="newUser.role" :items="roles" item-title="name" item-value="value"
+                    required></v-select>
                 </v-col>
               </v-row>
             </v-container>
@@ -128,10 +122,17 @@
             <v-container>
               <v-row>
                 <v-col cols="12">
-                  <v-text-field label="Name" v-model="editedUser.name"></v-text-field>
+                  <v-text-field label="Name" v-model="editedUser.name" required></v-text-field>
                 </v-col>
                 <v-col cols="12">
-                  <v-text-field label="Email" v-model="editedUser.email"></v-text-field>
+                  <v-text-field label="Email" v-model="editedUser.email" required></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-field label="Password" v-model="editedUser.password" type="password" required></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-select label="Role" v-model="editedUser.role" :items="roles" item-title="name" item-value="value"
+                    required></v-select>
                 </v-col>
               </v-row>
             </v-container>
@@ -147,6 +148,7 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
+
     </v-card>
   </v-container>
 </template>
@@ -182,7 +184,7 @@ export default {
         { name: 'User', value: 'user' },
       ],
       showEditDialog: false,
-      editedUser: null,
+      editedUser: {},
     };
   },
 
@@ -221,28 +223,27 @@ export default {
       return new Date(dateString).toLocaleDateString('en-US', options);
     },
 
-    addUser() {
-      if (!this.newUser.name || !this.newUser.email || !this.newUser.role || !this.newUser.password) {
-        alert('Please fill in all required fields.');
-        return;
-      }
+    async addUser() {
+  if (!this.newUser.name || !this.newUser.email || !this.newUser.role || !this.newUser.password) {
+    alert('Please fill in all required fields.');
+    return;
+  }
 
-      axios
-        .post('/admin/users', this.newUser)
-        .then(response => {
-          this.users.unshift(response.data); // Add the new user at the top of the list
-          this.showAddDialog = false;
-          this.newUser = { name: '', email: '', password: '', role: null }; // Reset the form
-          alert('User added successfully!');
-        })
-        .catch(error => {
-          console.error('Error adding user:', error);
-          alert(error.response?.data?.message || 'Failed to add user. Please try again.');
-        });
-    },
+  try {
+    await axios.post('/admin/users', this.newUser);
+    await this.fetchUsers();  // Wait until the users are fetched after the user is created
+    this.showAddDialog = false;
+    this.newUser = { name: '', email: '', password: '', role: null }; // Reset the form
+    alert('User added successfully!');
+  } catch (error) {
+    console.error('Error adding user:', error);
+    alert(error.response?.data?.message || 'Failed to add user. Please try again.');
+  }
+},
+
 
     editUser(user) {
-      this.editedUser = { ...user }; // Make a copy to prevent direct modification
+      this.editedUser = { ...user };
       this.showEditDialog = true;
     },
 
@@ -252,12 +253,11 @@ export default {
         return;
       }
 
-      axios
-        .put(`/admin/users/${this.editedUser.id}`, this.editedUser)
+      axios.put(`/users/${this.editedUser.id}/edit`, this.editedUser)
         .then(response => {
           const index = this.users.findIndex(user => user.id === this.editedUser.id);
           if (index !== -1) {
-            this.$set(this.users, index, response.data); // Update the user in the list
+            this.users[index] = response.data; // Direct assignment in Vue 3
           }
           this.showEditDialog = false;
           alert('User updated successfully!');
