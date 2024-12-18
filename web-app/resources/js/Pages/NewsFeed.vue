@@ -198,14 +198,45 @@ export default {
             const response = await axios.get(`/comments/${itemType}/${item.id}`);
             console.log(`Comments for item ${item.id}:`, response.data);
 
-            // Handle different response formats
-            const comments = response.data.comments || response.data || [];
+            // Handle different response formats and ensure we have an array
+            let commentsArray = [];
+            if (response.data?.comments?.data) {
+              commentsArray = response.data.comments.data;
+            } else if (response.data?.comments) {
+              commentsArray = Array.isArray(response.data.comments)
+                ? response.data.comments
+                : Object.values(response.data.comments);
+            } else if (Array.isArray(response.data)) {
+              commentsArray = response.data;
+            } else if (typeof response.data === 'object') {
+              commentsArray = Object.values(response.data);
+            }
+
+            // Ensure commentsArray is actually an array and filter out null values
+            commentsArray = Array.isArray(commentsArray) 
+              ? commentsArray.filter(comment => comment !== null)
+              : [];
             
-            // Ensure each comment has a userName
-            item.comments = comments.map(comment => ({
-              ...comment,
-              userName: comment.user?.name || comment.userName || 'Unknown User'
-            }));
+            // Ensure each comment has a userName and required fields
+            item.comments = commentsArray.map(comment => {
+              // Ensure we have the comment user data
+              const userName = comment.user?.name || comment.userName || 'Unknown User';
+              
+              return {
+                ...comment,
+                userName,
+                text: comment.text || '',
+                id: comment.id || null,
+                created_at: comment.created_at || new Date().toISOString(),
+                user: {
+                  ...comment.user,
+                  name: userName
+                }
+              };
+            });
+
+            // Sort comments by date, newest first
+            item.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
           } catch (error) {
             console.error(`Error fetching comments for item ${item.id}:`, error.message);
             item.comments = [];
@@ -225,10 +256,11 @@ export default {
 
         const response = await axios.post("/comments", {
           item_id: itemId,
-          text: text,
-          user_id: currentUserId.value,
+          text: text.trim(),
           item_type: itemType
         });
+
+        console.log('Comment submission response:', response.data);
 
         // Find the item and add the new comment
         const item = lostItems.value.find(item => item.id === itemId);
@@ -238,20 +270,22 @@ export default {
           }
           
           // Add the new comment with all required fields
-          const newComment = {
-            id: response.data.id,
-            text: text,
-            userName: userName.value,
-            created_at: new Date().toISOString(),
-            user: {
-              name: userName.value
-            }
-          };
-          
-          item.comments.push(newComment);
+          if (response.data.success && response.data.comment) {
+            const newComment = {
+              ...response.data.comment,
+              userName: response.data.comment.user?.name || userName.value,
+              text: text.trim(),
+              created_at: new Date().toISOString()
+            };
+            
+            item.comments.push(newComment);
+            
+            // Refresh comments to ensure consistency
+            await fetchComments();
+          }
         }
       } catch (error) {
-        console.error("Error submitting comment:", error.message);
+        console.error("Error submitting comment:", error);
       }
     };
 
