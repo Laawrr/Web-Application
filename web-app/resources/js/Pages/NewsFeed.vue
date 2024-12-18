@@ -57,6 +57,7 @@
             <CommentModal
               :show="activeCommentModal === item.id"
               :comments="item.comments || []"
+              :item="item"
               :item-id="item.id"
               :item-type="item.isFound ? 'found' : 'lost'"
               @close="activeCommentModal = null"
@@ -283,7 +284,5 @@ export default {
 </script>
 
 <style scoped>
-.hover\:scale-102:hover {
-  transform: scale(1.02);
-}
+
 </style>
