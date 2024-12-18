@@ -16,48 +16,44 @@
       </span>
     </button>
 
-    <div v-if="isOpen" class="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg overflow-hidden z-50">
-      <div class="py-2">
-        <h3 class="text-lg leading-6 font-medium text-gray-900 px-4 py-2 border-b">Notifications</h3>
-
-        <div v-if="notifications.length > 0" class="max-h-[70vh] overflow-y-auto">
-          <div v-for="(notification, index) in notifications" :key="index"
-            class="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0" 
-            @click="openNotificationDetails(notification)">
+    <div v-if="isOpen" class="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+      <div class="max-h-[80vh] overflow-y-auto">
+        <div class="py-1">
+          <h3 class="px-4 py-2 text-lg font-medium text-gray-900">Notifications</h3>
             
-            <!-- Notification Content -->
-            <div class="space-y-2">
-              <!-- User Info and Status -->
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                  <div class="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold">
-                    {{ notification.user?.name?.[0]?.toUpperCase() || 'U' }}
-                  </div>
-                  <div>
-                    <p class="font-medium text-gray-900">{{ notification.user?.name }}</p>
-                    <p class="text-sm text-gray-500">commented on <span class="font-medium">{{ notification.data.item_name }}</span></p>
-                  </div>
-                </div>
-                <span v-if="!notification.read_at" 
-                  class="bg-red-500 w-2.5 h-2.5 rounded-full"
-                  title="Unread notification"></span>
-              </div>
-
-              <!-- Comment Preview -->
-              <div class="bg-gray-50 p-3 rounded-lg">
-                <p class="text-gray-700 text-sm">{{ notification.data.comment_text }}</p>
-              </div>
-
-              <!-- Timestamp -->
-              <div class="text-xs text-gray-500">
-                {{ formatDate(notification.created_at) }}
-              </div>
-            </div>
+          <!-- No notifications message -->
+          <div v-if="notifications.length === 0" class="px-4 py-3 text-sm text-gray-700">
+            No notifications
           </div>
-        </div>
 
-        <div v-else class="p-6 text-center text-gray-500">
-          <p class="text-sm">No notifications yet</p>
+          <!-- Notification items -->
+          <div v-for="notification in notifications" 
+            :key="notification.id"
+            @click="openNotificationDetails(notification)"
+            class="px-4 py-3 hover:bg-gray-100 cursor-pointer"
+            :class="{ 'bg-gray-50': !notification.read_at }">
+              
+            <!-- User Info and Status -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold">
+                  {{ notification.userName?.[0]?.toUpperCase() || 'U' }}
+                </div>
+                <div>
+                  <p class="font-medium text-gray-900">{{ notification.userName }}</p>
+                  <p class="text-sm text-gray-500">commented on <span class="font-medium">{{ notification.data.item_name }}</span></p>
+                </div>
+              </div>
+              <span v-if="!notification.read_at" 
+                class="bg-red-500 w-2.5 h-2.5 rounded-full"
+                title="Unread notification"></span>
+            </div>
+              
+            <!-- Timestamp -->
+            <p class="mt-1 text-sm text-gray-500">
+              {{ formatDate(notification.created_at) }}
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -96,22 +92,35 @@ const toggleDropdown = () => {
 };
 
 const openNotificationDetails = async (notification) => {
-  console.log('Opening notification:', {
-    notification_id: notification.id,
-    item_id: notification.data.item_id,
-    item_type: notification.data.item_type,
-    notification_data: notification.data
-  });
-  
   try {
-    // Fetch item details
-    const itemUrl = notification.data.item_type === 'found' ? window.foundItemsUrl : window.lostItemsUrl;
-    const response = await axios.get(`${itemUrl}/${notification.data.item_id}`);
+    // Parse the notification data if it's a string
+    const notificationData = typeof notification.data === 'string' 
+      ? JSON.parse(notification.data) 
+      : notification.data;
+
+    console.log('Opening notification:', {
+      notification_id: notification.id,
+      item_id: notificationData.item_id,
+      item_type: notificationData.item_type,
+      notification_data: notificationData
+    });
+    
+    if (!notificationData || !notificationData.item_id || !notificationData.item_type) {
+      console.error('Invalid notification data:', notification);
+      return;
+    }
+    
+    // Fetch item details using the correct API endpoints
+    const itemUrl = `/${notificationData.item_type}-items/${notificationData.item_id}`;
+    console.log('Fetching item details from:', itemUrl);
+    const response = await axios.get(itemUrl);
     console.log('Fetched item details:', response.data);
     
     // Fetch comments for this item
     try {
-      const commentsResponse = await axios.get(`/comments/${notification.data.item_type}/${notification.data.item_id}`);
+      const commentsUrl = `/comments/${notificationData.item_type}/${notificationData.item_id}`;
+      console.log('Fetching comments from:', commentsUrl);
+      const commentsResponse = await axios.get(commentsUrl);
       console.log('Fetched comments:', commentsResponse.data);
       
       // Format comments with user names
@@ -124,20 +133,24 @@ const openNotificationDetails = async (notification) => {
       // Set the item data with comments
       selectedItem.value = {
         ...response.data,
-        id: notification.data.item_id,
-        isFound: notification.data.item_type === 'found',
-        userName: response.data.user?.name || notification.data.commenter_name || 'Unknown User',
-        item_name: notification.data.item_name,
+        id: notificationData.item_id,
+        isFound: notificationData.item_type === 'found',
+        userName: response.data.user?.name || response.data.userName || 'Unknown User', // Use the item owner's name from the user relationship
+        item_name: response.data.name || response.data.item_name || notificationData.item_name || 'Unnamed Item',
+        description: response.data.description || '',
         comments: comments
       };
+
+      console.log('Selected item data:', selectedItem.value);
     } catch (commentsError) {
       console.error('Error fetching comments:', commentsError);
       selectedItem.value = {
         ...response.data,
-        id: notification.data.item_id,
-        isFound: notification.data.item_type === 'found',
-        userName: response.data.user?.name || notification.data.commenter_name || 'Unknown User',
-        item_name: notification.data.item_name,
+        id: notificationData.item_id,
+        isFound: notificationData.item_type === 'found',
+        userName: response.data.user?.name || response.data.userName || 'Unknown User', // Use the item owner's name from the user relationship
+        item_name: response.data.name || response.data.item_name || notificationData.item_name || 'Unnamed Item',
+        description: response.data.description || '',
         comments: []
       };
     }
@@ -147,7 +160,8 @@ const openNotificationDetails = async (notification) => {
     isOpen.value = false;
     await markAsRead(notification.id);
   } catch (error) {
-    console.error('Error fetching details:', error);
+    console.error('Error in openNotificationDetails:', error);
+    console.error('Error details:', error.response?.data || error.message);
   }
 };
 
@@ -256,45 +270,60 @@ const fetchItems = async () => {
 const fetchNotifications = async () => {
   try {
     const response = await axios.get('/notifications');
-    console.log('Notifications response:', response.data);
-    
-    // Ensure we're working with an array of notifications
-    notifications.value = Array.isArray(response.data) ? response.data : 
-                         Array.isArray(response.data.notifications) ? response.data.notifications : 
-                         [];
-    
-    // Calculate unread count after ensuring we have an array
-    unreadCount.value = notifications.value.filter(n => !n.read_at).length;
-    
-    // Format notifications
-    notifications.value = notifications.value.map(notification => ({
-      ...notification,
-      user: users.value[notification.data.user_id] || { name: notification.data.commenter_name },
-      created_at: formatDate(notification.created_at)
-    }));
+    console.log('Fetched notifications:', response.data);
 
-    // Sort notifications by date, newest first
-    notifications.value.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    
-    // Fetch comments for each notification
-    if (notifications.value.length > 0) {
-      await fetchComments();
-    }
+    // Map notifications to include parsed data
+    notifications.value = response.data.notifications.map(notification => {
+      // Parse notification data if it's a string
+      const parsedData = typeof notification.data === 'string'
+        ? JSON.parse(notification.data)
+        : notification.data;
+
+      return {
+        ...notification,
+        data: parsedData,
+        userName: parsedData.commenter_name || notification.user?.name || 'Unknown User'
+      };
+    });
+
+    // Calculate unread count
+    unreadCount.value = notifications.value.filter(n => !n.read_at).length;
+    console.log('Unread notifications count:', unreadCount.value);
+
+    // Fetch comments for notifications
+    await fetchComments();
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    notifications.value = []; // Ensure it's always an array even on error
+    notifications.value = [];
     unreadCount.value = 0;
   }
 };
 
 const fetchComments = async () => {
   try {
-    console.log("Fetching comments for notifications...");
-    
-    for (let notification of notifications.value) {
+    for (const notification of notifications.value) {
       try {
-        const itemType = notification.data.item_type;
-        const itemId = notification.data.item_id;
+        // Parse notification data if it's a string
+        const notificationData = typeof notification.data === 'string'
+          ? JSON.parse(notification.data)
+          : notification.data;
+
+        // Skip if we don't have valid item data
+        if (!notificationData || !notificationData.item_id || !notificationData.item_type) {
+          console.warn('Invalid notification data:', notification);
+          notification.comments = [];
+          continue;
+        }
+
+        const itemType = notificationData.item_type;
+        const itemId = notificationData.item_id;
+        
+        console.log(`Fetching comments for ${itemType} item ${itemId}:`, {
+          notification_id: notification.id,
+          item_type: itemType,
+          item_id: itemId
+        });
+
         const response = await axios.get(`/comments/${itemType}/${itemId}`);
         console.log(`Comments for item ${itemId}:`, response.data);
 
@@ -304,16 +333,20 @@ const fetchComments = async () => {
         // Ensure each comment has a userName
         notification.comments = comments.map(comment => ({
           ...comment,
-          userName: comment.user?.name || comment.userName || 'Unknown User'
+          userName: comment.user?.name || comment.userName || 'Unknown User',
+          created_at: formatDate(comment.created_at)
         }));
 
         // Update the notification's comment text if it exists in the comments
-        const relatedComment = comments.find(c => c.id === notification.data.comment_id);
+        const relatedComment = comments.find(c => c.id === notificationData.comment_id);
         if (relatedComment) {
-          notification.data.comment_text = relatedComment.text;
+          notification.data = {
+            ...notificationData,
+            comment_text: relatedComment.text
+          };
         }
       } catch (error) {
-        console.error(`Error fetching comments for notification item ${notification.data.item_id}:`, error.message);
+        console.error(`Error fetching comments for notification item ${notification.id}:`, error.message);
         notification.comments = [];
       }
     }
@@ -327,19 +360,32 @@ const formatDate = (date) => {
   return new Date(date).toLocaleString(undefined, options);
 };
 
-const markAsRead = async (id) => {
+const markAsRead = async (notificationId) => {
   try {
-    await axios.put(`/notifications/${id}/read`);
-    const notification = notifications.value.find(n => n.id === id);
+    console.log('Marking notification as read:', notificationId);
+    await axios.put(`/notifications/${notificationId}/read`);
+    
+    // Update the notification in our local state
+    const notification = notifications.value.find(n => n.id === notificationId);
     if (notification) {
-      notification.read_at = true;
+      notification.read_at = new Date().toISOString();
+      // Update unread count
       unreadCount.value = notifications.value.filter(n => !n.read_at).length;
+      console.log('Updated unread count after marking as read:', unreadCount.value);
     }
   } catch (error) {
     console.error('Error marking notification as read:', error);
+    console.error('Error details:', error.response?.data || error.message);
   }
 };
 
+// Add watcher for notifications to update unread count
+watch(notifications, (newNotifications) => {
+  unreadCount.value = newNotifications.filter(n => !n.read_at).length;
+  console.log('Updated unread count from watcher:', unreadCount.value);
+}, { deep: true });
+
+// Fetch notifications on mount
 onMounted(async () => {
   await fetchCurrentUser();
   await fetchUsers();

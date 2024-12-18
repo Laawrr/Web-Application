@@ -68,7 +68,7 @@ class LostItemController extends Controller
      */
     public function show($id)
     {
-        $lostItem = LostItem::findOrFail($id);
+        $lostItem = LostItem::with('user')->findOrFail($id);
         return response()->json($lostItem);
     }
 

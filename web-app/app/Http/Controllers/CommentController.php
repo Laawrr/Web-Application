@@ -57,28 +57,32 @@ class CommentController extends Controller
                 $comment->commentable_type = $modelClass;
                 $comment->save();
                 
+                // Load the user relationship for the response
+                $comment->load('user');
+                
                 Log::info('Comment created:', ['comment' => $comment->toArray()]);
     
                 // Create notification for the item owner
                 if ($item->user_id !== auth()->id()) {
+                    $notificationData = [
+                        'item_id' => $item->id,
+                        'item_type' => $request->item_type,
+                        'comment_id' => $comment->id,
+                        'item_name' => $item->name ?? $item->item_name ?? 'Unknown Item',
+                        'commenter_name' => auth()->user()->name
+                    ];
+
                     Notification::create([
                         'user_id' => $item->user_id,
                         'title' => 'New Comment',
                         'message' => auth()->user()->name . ' commented on your ' . $request->item_type . ' item.',
                         'type' => 'comment',
                         'read' => false,
-                        'data' => json_encode([
-                            'item_id' => $item->id,
-                            'item_type' => $request->item_type,
-                            'comment_id' => $comment->id
-                        ])
+                        'data' => json_encode($notificationData)
                     ]);
                 }
     
                 DB::commit();
-    
-                // Load the user relationship for the response
-                $comment->load('user');
     
                 return response()->json([
                     'message' => 'Comment added successfully',

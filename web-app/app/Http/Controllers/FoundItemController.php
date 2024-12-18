@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\foundItem;
+use App\Models\FoundItem;
 use Illuminate\Http\Request;
 
-class foundItemController extends Controller
+class FoundItemController extends Controller
 {
     /**
      * Display a listing of the found items.
      */
     public function index()
     {
-        $foundItems = foundItem::all();
+        $foundItems = FoundItem::all();
         return response()->json($foundItems);
     }
 
@@ -48,7 +48,7 @@ class foundItemController extends Controller
             'user_id' => 'required|exists:users,id',
         ]);
 
-        $foundItem = foundItem::create([
+        $foundItem = FoundItem::create([
             'found_date' => $request->input('found_date'),
             'item_name' => $request->input('item_name'),
             'facebook_link' => $request->input('facebook_link'),
@@ -68,7 +68,7 @@ class foundItemController extends Controller
      */
     public function show($id)
     {
-        $foundItem = foundItem::findOrFail($id);
+        $foundItem = FoundItem::with('user')->findOrFail($id);
         return response()->json($foundItem);
     }
 
@@ -77,7 +77,7 @@ class foundItemController extends Controller
      */
     public function edit($id)
     {
-        $foundItem = foundItem::findOrFail($id);
+        $foundItem = FoundItem::findOrFail($id);
         return response()->json($foundItem);
     }
 
@@ -86,7 +86,7 @@ class foundItemController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $foundItem = foundItem::findOrFail($id);
+        $foundItem = FoundItem::findOrFail($id);
 
         $imageUrl = $foundItem->image_url;
         if ($request->hasFile('image_url')) {
@@ -132,7 +132,7 @@ class foundItemController extends Controller
      */
     public function destroy($id)
     {
-        $foundItem = foundItem::findOrFail($id);
+        $foundItem = FoundItem::findOrFail($id);
         
         $filePath = public_path($foundItem->image_url);
         if (file_exists($filePath)) {
