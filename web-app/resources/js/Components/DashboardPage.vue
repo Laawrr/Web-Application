@@ -6,13 +6,17 @@
         <section class="dashboard-header">
           <h1>Lost and Found</h1>
           <div class="search-bar">
-            <input type="text" v-model="searchQuery" placeholder="Search for lost items..." @input="filterPosts" />
+            <input type="text" v-model="searchQuery" placeholder="Search for lost items..." @input="debouncedFilter" />
           </div>
         </section>
 
         <!-- Featured Posts -->
         <section class="featured-posts">
-          <div v-if="filteredPosts.length === 0" class="no-posts">
+          <div v-if="isLoading" class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading posts...</p>
+          </div>
+          <div v-else-if="filteredPosts.length === 0" class="no-posts">
             <p>No posts found.</p>
           </div>
           <div v-for="post in filteredPosts" :key="post.id" class="card">
@@ -145,11 +149,13 @@
 <script>
 import Map from "./map.vue";
 import axios from "axios";
+import { debounce } from 'lodash';
 
 export default {
   components: { Map },
   data() {
     return {
+      isLoading: false,
       newItem: {
         item_name: "",
         status: "",
@@ -179,8 +185,8 @@ export default {
     };
   },
   created() {
-    this.fetchPosts();
-    this.fetchUserId();
+    this.debouncedFilter = debounce(this.filterPosts, 300);
+    this.fetchUserId().then(() => this.fetchPosts());
   },
   watch: {
     posts: {
@@ -195,37 +201,47 @@ export default {
       try {
         const response = await axios.get(window.userID);
         this.newItem.user_id = response.data.id;
-        console.log("Fetched user ID:", this.newItem.user_id); 
       } catch (error) {
         console.error("Error fetching user ID:", error.message);
+        this.showError("Failed to fetch user ID");
       }
     },
     async fetchPosts() {
+      this.isLoading = true;
       try {
         const [lostResponse, foundResponse] = await Promise.all([
           axios.get(window.lostItemsUrl),
           axios.get(window.foundItemsUrl),
         ]);
 
-        // Filter lost and found items by the current user's ID
-        const lostPosts = lostResponse.data
-          .filter(post => post.user_id === this.newItem.user_id)
-          .map(post => ({ ...post, isFound: false }));
+        // Process the data in batches
+        const processItems = (items, isFound) => {
+          return items
+            .filter(post => post.user_id === this.newItem.user_id)
+            .map(post => ({ ...post, isFound }));
+        };
 
-        const foundPosts = foundResponse.data
-          .filter(post => post.user_id === this.newItem.user_id)
-          .map(post => ({ ...post, isFound: true }));
+        const lostPosts = processItems(lostResponse.data, false);
+        const foundPosts = processItems(foundResponse.data, true);
 
         this.posts = [...lostPosts, ...foundPosts];
         this.filterPosts();
       } catch (error) {
         console.error("Error fetching posts:", error.message);
+        this.showError("Failed to fetch posts");
+      } finally {
+        this.isLoading = false;
       }
     },
     filterPosts() {
-      this.filteredPosts = this.posts.filter((post) =>
-        post.item_name.toLowerCase().includes(this.searchQuery.toLowerCase())
-      );
+      const query = this.searchQuery.toLowerCase();
+      this.filteredPosts = query
+        ? this.posts.filter(post => 
+            post.item_name.toLowerCase().includes(query) ||
+            post.description.toLowerCase().includes(query) ||
+            post.category.toLowerCase().includes(query)
+          )
+        : [...this.posts];
     },
     handleFileUpload(event) {
       const file = event.target.files[0];
@@ -753,5 +769,29 @@ export default {
   max-width: 90%;
   max-height: 90vh;
   object-fit: contain;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  width: 100%;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>
