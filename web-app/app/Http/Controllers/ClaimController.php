@@ -12,19 +12,37 @@ class ClaimController extends Controller
 {
     public function store(Request $request)
     {
+        // Handle file upload
+        $imageUrl = null;
+        if ($request->hasFile('proof_of_ownership')) {
+            $image = $request->file('proof_of_ownership');
+            $filename = time() . '.' . $image->extension();
+            $image->move(public_path('assets/proof'), $filename);
+            $imageUrl = 'assets/proof/' . $filename;
+        }
+
+        // Validate the request
         $validated = $request->validate([
             'lost_item_id' => 'required|exists:lost_items,lost_item_id',
             'found_item_id' => 'required|exists:found_items,found_item_id',
             'user_id' => 'required|exists:users,user_id',
             'claim_status' => 'required|in:Pending,Approved,Rejected',
-            'proof_of_ownership' => 'nullable|string',
             'submission_date' => 'required|date',
         ]);
 
-        $claim = Claim::create($validated);
+        // Create the claim
+        $claim = Claim::create([
+            'lost_item_id' => $validated['lost_item_id'],
+            'found_item_id' => $validated['found_item_id'],
+            'user_id' => $validated['user_id'],
+            'claim_status' => $validated['claim_status'],
+            'submission_date' => $validated['submission_date'],
+            'proof_of_ownership' => $imageUrl,
+        ]);
 
         return response()->json($claim, 201);
     }
+
 
     public function update(Request $request, $id)
     {
