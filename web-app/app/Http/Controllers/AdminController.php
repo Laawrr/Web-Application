@@ -9,7 +9,8 @@ use App\Models\LostItem;
 use App\Models\FoundItem;
 use App\Models\Claim;
 use App\Models\ActivityLog;
-use Illuminate\Support\Facades\Auth; // Make sure this is imported for authentication
+use Illuminate\Support\Facades\Auth; // Import for authentication
+use Illuminate\Support\Facades\Hash; // Import for password hashing
 
 class AdminController extends Controller
 {
@@ -20,13 +21,11 @@ class AdminController extends Controller
 
     public function dashboard()
     {
-        // Fetching the counts from the database
         $totalUsers = User::count();
-        $lostItems = LostItem::count(); 
-        $foundItems = FoundItem::count(); 
+        $lostItems = LostItem::count();
+        $foundItems = FoundItem::count();
         $claims = Claim::count();
 
-        // Return data in JSON format
         return response()->json([
             'totalUsers' => $totalUsers,
             'lostItems' => $lostItems,
@@ -64,15 +63,45 @@ class AdminController extends Controller
         ]);
     }
 
-
-
     public function getID()
     {
-        $user = Auth::user(); 
+        $user = Auth::user();
 
         return response()->json([
-            'id' => $user->id, 
-            'last_login_at' => $user->last_login_at, 
+            'id' => $user->id,
+            'last_login_at' => $user->last_login_at,
         ]);
+    }
+
+    // New method to add a user
+    public function store(Request $request)
+    {
+        // Validate the request data
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8',
+            'role' => 'required|string|in:Admin,Editor,Viewer', // Valid roles
+        ]);
+
+        // Create the user
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password), // Hash the password
+            'role' => $request->role,
+        ]);
+
+        // Log the action
+        ActivityLog::create([
+            'user_id' => Auth::id(), // Current admin user ID
+            'action' => 'Created a new user: ' . $user->name,
+            'action_time' => now(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->header('User-Agent'),
+        ]);
+
+        // Return the newly created user in the response
+        return response()->json($user, 201);
     }
 }
