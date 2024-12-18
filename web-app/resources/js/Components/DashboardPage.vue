@@ -12,10 +12,14 @@
 
         <!-- Featured Posts -->
         <section class="featured-posts">
-          <div v-if="filteredPosts.length === 0" class="no-posts">
+          <div v-if="isLoading" class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading items...</p>
+          </div>
+          <div v-else-if="filteredPosts.length === 0" class="no-posts">
             <p>No posts found.</p>
           </div>
-          <div v-for="post in filteredPosts" :key="post.id" class="card">
+          <div v-else v-for="post in filteredPosts" :key="post.id" class="card">
             <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image clickable"
               @click="enlargeImage(post.image_url)" />
             <p class="post-date">{{ post.lost_date || post.found_date }}</p>
@@ -172,6 +176,7 @@ export default {
       locationSelected: false,
       mapEnabled: false,
       isSubmitting: false,
+      isLoading: true,
       containerStyle: {
         minHeight: '100vh',
         paddingBottom: '100px', // Initial padding
@@ -202,24 +207,27 @@ export default {
     },
     async fetchPosts() {
       try {
+        this.isLoading = true;
         const [lostResponse, foundResponse] = await Promise.all([
           axios.get(window.lostItemsUrl),
           axios.get(window.foundItemsUrl),
         ]);
 
-        // Filter lost and found items by the current user's ID
-        const lostPosts = lostResponse.data
-          .filter(post => post.user_id === this.newItem.user_id)
-          .map(post => ({ ...post, isFound: false }));
-
-        const foundPosts = foundResponse.data
-          .filter(post => post.user_id === this.newItem.user_id)
-          .map(post => ({ ...post, isFound: true }));
-
-        this.posts = [...lostPosts, ...foundPosts];
+        const lostItems = lostResponse.data.map(item => ({ ...item, isFound: false }));
+        const foundItems = foundResponse.data.map(item => ({ ...item, isFound: true }));
+        
+        this.posts = [...lostItems, ...foundItems].sort((a, b) => {
+          const dateA = new Date(a.lost_date || a.found_date);
+          const dateB = new Date(b.lost_date || b.found_date);
+          return dateB - dateA;
+        });
+        
+        this.filteredPosts = [...this.posts];
         this.filterPosts();
       } catch (error) {
         console.error("Error fetching posts:", error.message);
+      } finally {
+        this.isLoading = false;
       }
     },
     filterPosts() {
@@ -751,5 +759,29 @@ export default {
   max-width: 90%;
   max-height: 90vh;
   object-fit: contain;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  width: 100%;
+}
+
+.loading-spinner .spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #14b8a6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>
