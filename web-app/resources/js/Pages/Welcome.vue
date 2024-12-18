@@ -23,7 +23,7 @@
                     <h1 class="text-4xl md:text-5xl font-bold mb-6">Lost & Found Made Easy</h1>
                     <p class="text-xl mb-8 max-w-2xl mx-auto">Find what you've lost or help others recover their
                         belongings.</p>
-                    <button @click="showLoginModal = true"
+                    <button @click="handleShowLogin"
                         class="bg-white text-teal-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
                         Get Started
                     </button>
@@ -69,7 +69,7 @@
             <div class="container mx-auto px-4 text-center">
                 <h2 class="text-3xl font-bold mb-8">Ready to Get Started?</h2>
                 <p class="text-xl mb-8">Join our community and start finding lost items today.</p>
-                <button @click="showLoginModal = true"
+                <button @click="handleShowLogin"
                     class="bg-teal-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-teal-600 transition-colors">
                     Join Now
                 </button>
@@ -85,10 +85,14 @@
 
         <!-- Login Modal -->
         <Modal :show="showLoginModal" @close="closeLoginModal">
-            <div class="min-h-screen flex items-center justify-center">
-                <div class="w-full sm:max-w-lg">
-                    <div class="bg-white rounded-lg shadow-md p-8">
-                        <Login />
+            <div class="min-h-screen flex items-center justify-center p-4">
+                <div class="w-full max-w-md bg-white rounded-lg shadow-xl">
+                    <div class="p-6">
+                        <div class="text-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-900">Welcome Back</h2>
+                            <p class="mt-2 text-sm text-gray-600">Please sign in to your account</p>
+                        </div>
+                        <Login @close="closeLoginModal" />
                     </div>
                 </div>
             </div>
@@ -98,12 +102,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import Navbar from '@/Components/Navbar.vue';
 import Modal from '@/Components/Modal.vue';
 import Login from '@/Pages/Auth/Login.vue';
 
 const showLoginModal = ref(false);
+const currentSlide = ref(0);
 
 const handleShowLogin = () => {
     showLoginModal.value = true;
@@ -117,9 +122,7 @@ const slides = [
     'img/image3.png',
     'img/image4.png',
     'img/image5.png',
-    'img/image6.png',
 ];
-const currentSlide = ref(0);
 
 const nextSlide = () => {
     currentSlide.value = (currentSlide.value + 1) % slides.length;
