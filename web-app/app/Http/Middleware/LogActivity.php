@@ -22,15 +22,15 @@ class LogActivity
         $response = $next($request);
 
         // Log user activity after the request is handled
-        if (Auth::check()) {
-            ActivityLog::create([
-                'user_id' => Auth::id(),
-                'action' => $request->method() . ' ' . $request->path(), // Log the request method and path
-                'action_time' => now(),
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->header('User-Agent'),
-            ]);
-        }
+        // if (Auth::check()) {
+        //     ActivityLog::create([
+        //         'user_id' => Auth::id(),
+        //         'action' => $request->method() . ' ' . $request->path(), // Log the request method and path
+        //         'action_time' => now(),
+        //         'ip_address' => $request->ip(),
+        //         'user_agent' => $request->header('User-Agent'),
+        //     ]);
+        // }
 
         return $response;
     }

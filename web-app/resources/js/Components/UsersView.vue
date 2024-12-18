@@ -95,8 +95,14 @@
                   <v-text-field label="Password" v-model="newUser.password" type="password" required></v-text-field>
                 </v-col>
                 <v-col cols="12">
-                  <v-select label="Role" v-model="newUser.role" :items="roles" item-text="name" item-value="value"
-                    required></v-select>
+                  <v-select
+                    label="Role"
+                    v-model="newUser.role"
+                    :items="roles"
+                    item-title="name"
+                    item-value="value"
+                    required
+                  ></v-select>
                 </v-col>
               </v-row>
             </v-container>
@@ -147,6 +153,7 @@
 
 <script>
 import axios from 'axios';
+import { ref } from 'vue';
 
 export default {
   name: 'UsersView',
@@ -154,47 +161,11 @@ export default {
     return {
       search: '',
       headers: [
-        {
-          text: 'Name',
-          value: 'name',
-          width: '25%',
-          align: 'start',
-          sortable: true,
-          filterable: true,
-        },
-        {
-          text: 'Email',
-          value: 'email',
-          width: '30%',
-          align: 'start',
-          sortable: true,
-          filterable: true,
-        },
-        {
-          text: 'Role',
-          value: 'role',
-          width: '15%',
-          align: 'start',
-          sortable: true,
-        },
-        {
-          text: 'Created',
-          value: 'created_at',
-          width: '15%',
-          align: 'start',
-          sortable: true,
-        },
-        {
-          text: 'Actions',
-          value: 'actions',
-          width: '10%',
-          align: 'center',
-          sortable: false,
-        },
-      ],
-      roles: [
-        { name: 'Admin', value: 'admin' },
-        { name: 'User', value: 'user' },
+        { text: 'Name', value: 'name', width: '25%' },
+        { text: 'Email', value: 'email', width: '30%' },
+        { text: 'Role', value: 'role', width: '15%' },
+        { text: 'Created', value: 'created_at', width: '15%' },
+        { text: 'Actions', value: 'actions', width: '10%', align: 'center', sortable: false },
       ],
       users: [],
       page: 1,
@@ -203,14 +174,18 @@ export default {
       newUser: {
         name: '',
         email: '',
+        password: '',
+        role: null,
       },
+      roles: [
+        { name: 'Admin', value: 'admin' },
+        { name: 'User', value: 'user' },
+      ],
       showEditDialog: false,
-      editedUser: {
-        name: '',
-        email: '',
-      },
+      editedUser: null,
     };
   },
+
 
   computed: {
     filteredUsers() {
@@ -222,15 +197,16 @@ export default {
   },
 
   created() {
-    this.fetchLogs();
+    this.fetchUsers();
   },
 
   methods: {
-    fetchLogs() {
+    fetchUsers() {
       this.loading = true;
-      axios.get('/admin/users')
+      axios
+        .get('/admin/users')
         .then(response => {
-          this.users = response.data.users.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sorting by created_at in descending order
+          this.users = response.data.users.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         })
         .catch(error => {
           console.error('Error fetching users:', error);
@@ -240,70 +216,77 @@ export default {
         });
     },
 
-
     formatDate(dateString) {
-      const options = {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const date = new Date(dateString);
-      return date.toLocaleString('en-US', options);
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      return new Date(dateString).toLocaleDateString('en-US', options);
     },
 
-
     addUser() {
-      // Validate form inputs
       if (!this.newUser.name || !this.newUser.email || !this.newUser.role || !this.newUser.password) {
-        alert('Please fill in all the fields, including the password.');
+        alert('Please fill in all required fields.');
         return;
       }
 
-      // Send data to the backend using Axios
-      axios.post('/admin/users', this.newUser)
+      axios
+        .post('/admin/users', this.newUser)
         .then(response => {
-          // Add the newly created user to the beginning of the users list
-          this.users.unshift(response.data);
-
-          // Hide the dialog
+          this.users.unshift(response.data); // Add the new user at the top of the list
           this.showAddDialog = false;
-
-          // Reset the newUser object
-          this.newUser = { name: '', email: '', role: '', password: '' };
-
-          // Display a success message
+          this.newUser = { name: '', email: '', password: '', role: null }; // Reset the form
           alert('User added successfully!');
         })
         .catch(error => {
-          // Log the error
           console.error('Error adding user:', error);
-
-          // Extract and display validation or server errors (if available)
-          const errorMessage = error.response?.data?.message || 'Failed to add user. Please try again.';
-          alert(errorMessage);
+          alert(error.response?.data?.message || 'Failed to add user. Please try again.');
         });
     },
 
     editUser(user) {
-      this.editedUser = { ...user };
+      this.editedUser = { ...user }; // Make a copy to prevent direct modification
       this.showEditDialog = true;
     },
 
     saveEdit() {
-      console.log('Save edit:', this.editedUser);
-      this.showEditDialog = false;
+      if (!this.editedUser.name || !this.editedUser.email) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+
+      axios
+        .put(`/admin/users/${this.editedUser.id}`, this.editedUser)
+        .then(response => {
+          const index = this.users.findIndex(user => user.id === this.editedUser.id);
+          if (index !== -1) {
+            this.$set(this.users, index, response.data); // Update the user in the list
+          }
+          this.showEditDialog = false;
+          alert('User updated successfully!');
+        })
+        .catch(error => {
+          console.error('Error updating user:', error);
+          alert(error.response?.data?.message || 'Failed to update user. Please try again.');
+        });
     },
 
     deleteUser(user) {
-      // Add delete confirmation dialog here
-      console.log('Delete user:', user);
+      if (confirm(`Are you sure you want to delete ${user.name}?`)) {
+        axios
+          .delete(`/users/${user.id}`)
+          .then(() => {
+            this.users = this.users.filter(u => u.id !== user.id); // Remove the user from the list
+            alert('User deleted successfully!');
+          })
+          .catch(error => {
+            console.error('Error deleting user:', error);
+            alert(error.response?.data?.message || 'Failed to delete user. Please try again.');
+          });
+      }
     },
   },
 };
 </script>
+
+
 
 <style scoped>
 .v-data-table {

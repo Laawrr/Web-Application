@@ -73,35 +73,37 @@ class AdminController extends Controller
         ]);
     }
 
-    // New method to add a user
     public function store(Request $request)
     {
-        // Validate the request data
-        $request->validate([
+        // Validate Request Data
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'role' => 'required|string|in:Admin,Editor,Viewer', // Valid roles
+            'role' => 'required|string|in:admin,user',
         ]);
 
-        // Create the user
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password), // Hash the password
-            'role' => $request->role,
-        ]);
+        try {
+            // Create New User
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'role' => $validated['role'],
+            ]);
 
-        // Log the action
-        ActivityLog::create([
-            'user_id' => Auth::id(), // Current admin user ID
-            'action' => 'Created a new user: ' . $user->name,
-            'action_time' => now(),
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->header('User-Agent'),
-        ]);
+            // No manual logging needed since the trigger handles this.
 
-        // Return the newly created user in the response
-        return response()->json($user, 201);
+            return response()->json([
+                'message' => 'User created successfully',
+                'user' => $user,
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('User Creation Failed: ' . $e->getMessage());
+
+            return response()->json([
+                'error' => 'Failed to create user. Please try again.',
+            ], 500);
+        }
     }
 }
