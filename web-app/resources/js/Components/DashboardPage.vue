@@ -28,11 +28,8 @@
           <div class="post-modal__content" @click.stop>
             <h2 class="post-modal__title">Item Details</h2>
 
-            <img v-if="currentPost.image_url" 
-                 :src="currentPost.image_url" 
-                 alt="Item Image" 
-                 class="post-modal__image" />
-            
+            <img v-if="currentPost.image_url" :src="currentPost.image_url" alt="Item Image" class="post-modal__image" />
+
             <div class="post-modal__info">
               <p class="post-modal__text"><strong>Item Name:</strong> {{ currentPost.item_name }}</p>
               <p class="post-modal__text"><strong>Status:</strong> {{ currentPost.isFound ? 'Found' : 'Lost' }}</p>
@@ -198,22 +195,15 @@
 </template>
 
 <script>
-import Map from '@/components/Map.vue'; // Ensure the path is correct
 import axios from "axios";
+import Map from "./map.vue";
+import { debounce } from "lodash";
 
 export default {
-  components: {
-    Map,
-  },
+  components: { Map },
   data() {
     return {
-      posts: [],
-      filteredPosts: [],
-      searchQuery: "",
-      currentPost: null,  // Holds the current post for modal display
-      showPostModal: false,  // Controls the visibility of the post modal
-      showEditModal: false,
-      showUploadForm: false,  // Controls the visibility of the edit modal
+      isLoading: false,
       newItem: {
         item_name: "",
         status: "",
@@ -226,104 +216,88 @@ export default {
         location: null,
         image_file: null,
         image_preview_url: null,
-        user_id: null
+        user_id: null,
       },
-      isSubmitting: false,
+      posts: [],
+      filteredPosts: [],
+      searchQuery: "",
+      showUploadForm: false,
+      enlargedImage: null,
       locationSelected: false,
       mapEnabled: false,
-      containerStyle: { paddingBottom: '100px' },
-      enlargedImage: null,
+      isSubmitting: false,
+      containerStyle: {
+        minHeight: "100vh",
+        paddingBottom: "100px", // Initial padding
+      },
+      showPostModal: false,
+      showEditModal: false,
+      currentPost: {},
     };
   },
-
   created() {
-    this.fetchPosts();
+    this.debouncedFilter = debounce(this.filterPosts, 300);
+    this.fetchUserId().then(() => this.fetchPosts());
+  },
+  watch: {
+    posts: {
+      handler(newPosts) {
+        this.updateSpacing(newPosts);
+      },
+      deep: true,
+    },
   },
   methods: {
-    showError(message) {
-      alert(message);
-    },
-    // Method to open the post modal
-    openPostModal(post) {
-      this.currentPost = post;
-      this.showPostModal = true;
-    },
-    updateLocation(location) {
-      console.log('Location selected:', location); 
-      this.newItem.location = location; 
-    },  
-    enableLocationSelection() {
-      console.log('Map enabled!'); 
-      this.mapEnabled = true;
-    },
-
-    // Method to close the post modal
-    closePostModal() {
-      this.showPostModal = false;
-      this.currentPost = null;
-    },
-    
-    // Method to open the edit modal
-    openEditModal() {
-      this.showEditModal = true;
-    },
-    
-    // Method to close the edit modal
-    closeEditModal() {
-      this.showEditModal = false;
-    },
-    
-    // Method to submit the edited form
-    submitEditForm() {
-      // Logic to submit the edited post details
-      console.log('Edited Post:', this.currentPost);
-      this.closeEditModal(); // Close the edit modal after saving
-    },
-
-    // Fetch the posts from the server
-    async fetchPosts() {
+    async fetchUserId() {
       try {
-        const [lostResponse, foundResponse] = await Promise.all([
-          axios.get(window.lostItemsUrl),
-          axios.get(window.foundItemsUrl),
+        const response = await axios.get(window.userID);
+        this.newItem.user_id = response.data.id;
+      } catch (error) {
+        console.error("Error fetching user ID:", error.message);
+        this.showError("Failed to fetch user ID");
+      }
+    },
+    async fetchPosts() {
+      this.isLoading = true;
+      try {
+        const [lostResponse, foundResponse] = await Promise.all([ 
+          axios.get(window.lostItemsUrl), 
+          axios.get(window.foundItemsUrl) 
         ]);
-        const lostPosts = lostResponse.data.map(post => ({ ...post, isFound: false }));
-        const foundPosts = foundResponse.data.map(post => ({ ...post, isFound: true }));
+
+        const processItems = (items, isFound) => {
+          return items
+            .filter((post) => post.user_id === this.newItem.user_id)
+            .map((post) => ({ ...post, isFound }));
+        };
+
+        const lostPosts = processItems(lostResponse.data, false);
+        const foundPosts = processItems(foundResponse.data, true);
+
         this.posts = [...lostPosts, ...foundPosts];
         this.filterPosts();
       } catch (error) {
         console.error("Error fetching posts:", error.message);
+        this.showError("Failed to fetch posts");
+      } finally {
+        this.isLoading = false;
       }
     },
-    
-    // Filter posts based on the search query
     filterPosts() {
-      this.filteredPosts = this.posts.filter((post) =>
-        post.item_name.toLowerCase().includes(this.searchQuery.toLowerCase())
-      );
+      const query = this.searchQuery.toLowerCase();
+      this.filteredPosts = query
+        ? this.posts.filter(
+            (post) =>
+              post.item_name.toLowerCase().includes(query) ||
+              post.description.toLowerCase().includes(query) ||
+              post.category.toLowerCase().includes(query)
+          )
+        : [...this.posts];
     },
-    
-    // Handle delete post
-    async deletePost(postId) {
-      if (confirm("Are you sure you want to delete this post?")) {
-        try {
-          await axios.delete(`/path-to-delete-post/${postId}`);
-          this.posts = this.posts.filter(post => post.id !== postId);
-          this.filteredPosts = this.filteredPosts.filter(post => post.id !== postId);
-          alert("Post deleted successfully!");
-        } catch (error) {
-          console.error("Error deleting post:", error.message);
-        }
-      }
-    },
-
-    // Handle file upload
     handleFileUpload(event) {
       const file = event.target.files[0];
       if (file) {
         this.newItem.image_file = file;
-        
-        // Create a preview URL
         const reader = new FileReader();
         reader.onload = (e) => {
           this.newItem.image_preview_url = e.target.result;
@@ -331,46 +305,179 @@ export default {
         reader.readAsDataURL(file);
       }
     },
-    
-    // Submit the upload form
+    resetNewItem() {
+      this.newItem = {
+        item_name: "",
+        status: "",
+        category: "",
+        lost_date: "",
+        found_date: "",
+        description: "",
+        facebook_link: "",
+        contact_number: "",
+        location: null,
+        image_file: null,
+        image_preview_url: null,
+        user_id: this.newItem.user_id,
+      };
+    },
+    updateLocation(location) {
+      this.newItem.location = location;
+      this.locationSelected = true;
+    },
     async submitForm() {
+      if (!this.newItem.location) {
+        this.showError("Please select a location on the map first");
+        return;
+      }
+
+      this.isSubmitting = true;
       try {
-        this.isSubmitting = true;
         const formData = new FormData();
-        Object.keys(this.newItem).forEach(key => {
-          formData.append(key, this.newItem[key]);
+
+        if (this.newItem.image_file) {
+          formData.append("image_url", this.newItem.image_file);
+        }
+
+        const formFields = {
+          item_name: this.newItem.item_name,
+          status: this.newItem.status,
+          category: this.newItem.category,
+          description: this.newItem.description,
+          facebook_link: this.newItem.facebook_link,
+          contact_number: this.newItem.contact_number,
+          user_id: this.newItem.user_id,
+          latitude: this.newItem.location.lat,
+          longitude: this.newItem.location.lng,
+        };
+
+        formFields.location = `${this.newItem.location.lat},${this.newItem.location.lng}`;
+
+        if (this.newItem.status === "Lost") {
+          formFields.lost_date = this.newItem.lost_date;
+        } else {
+          formFields.found_date = this.newItem.found_date;
+        }
+
+        Object.keys(formFields).forEach((key) => {
+          if (formFields[key] !== null && formFields[key] !== undefined) {
+            formData.append(key, formFields[key]);
+          }
         });
-        
-        const response = await axios.post('/path-to-upload-post', formData);
-        
-        alert('Post submitted successfully');
-        this.showUploadForm = false;
+
+        const token = document.head.querySelector('meta[name="csrf-token"]');
+
+        if (!token) {
+          this.showError("CSRF token not found. Please refresh the page.");
+          return;
+        }
+
+        formData.append("_token", token.content);
+
+        const url =
+          this.newItem.status === "Lost" ? window.lostItemsStore : window.foundItemsStore;
+
+        const response = await axios.post(url, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "X-CSRF-TOKEN": token.content,
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          withCredentials: true,
+        });
+
+        this.showSuccess("Post created successfully!");
+        this.closeUploadForm();
+        await this.fetchPosts();
       } catch (error) {
-        console.error('Error submitting form:', error.message);
-        this.showError('Error submitting the form');
+        if (error.response && error.response.status === 422) {
+          const validationErrors = error.response.data.errors;
+          const errorMessages = Object.values(validationErrors)
+            .flat()
+            .join("\n");
+          this.showError("Validation failed:\n" + errorMessages);
+        } else {
+          this.showError("Error creating post: " + error.message);
+        }
       } finally {
         this.isSubmitting = false;
       }
     },
-
-    // Close the upload form modal
+    showError(message) {
+      const errorLines = message.split("\n");
+      const formattedMessage = errorLines.join("\n• ");
+      alert("• " + formattedMessage);
+    },
+    showSuccess(message) {
+      alert(message);
+    },
     closeUploadForm() {
       this.showUploadForm = false;
-      this.newItem = {};  // Reset the newItem data
+      this.resetNewItem();
+      this.locationSelected = false;
+      this.mapEnabled = false;
     },
-
-    // Enlarging the image on click
     enlargeImage(imageUrl) {
       this.enlargedImage = imageUrl;
     },
-
-    // Close the enlarged image view
     closeImage() {
       this.enlargedImage = null;
+    },
+    async deletePost(postId) {
+      if (confirm("Are you sure you want to delete this post?")) {
+        try {
+          const post = this.posts.find((p) => p.id === postId);
+          if (post.user_id !== this.newItem.user_id) {
+            this.showError("You don't have permission to delete this post.");
+            return;
+          }
+
+          const response = await axios.delete(`${window.deletePostUrl}/${postId}`, {
+            headers: {
+              "X-CSRF-TOKEN": document.head.querySelector('meta[name="csrf-token"]').content,
+            },
+          });
+
+          this.showSuccess("Post deleted successfully.");
+          await this.fetchPosts();
+        } catch (error) {
+          this.showError("Error deleting post: " + error.message);
+        }
+      }
+    },
+    enableLocationSelection() {
+      this.mapEnabled = !this.mapEnabled;
+    },
+    updateSpacing(newPosts) {
+      if (newPosts.length < 5) {
+        this.containerStyle.paddingBottom = "100px";
+      } else {
+        this.containerStyle.paddingBottom = "150px";
+      }
+    },
+    openPostModal(post) {
+      this.currentPost = post;
+      this.showPostModal = true;
+    },
+    closePostModal() {
+      this.showPostModal = false;
+      this.currentPost = {};
+    },
+    openEditModal() {
+      this.showEditModal = true;
+    },
+    closeEditModal() {
+      this.showEditModal = false;
+    },
+    submitEditForm() {
+      // Handle the form submission logic for editing a post
+      this.showEditModal = false;
+      this.showSuccess("Post updated successfully!");
     }
-  }
+  },
 };
 </script>
+
 
 
 <style scoped>
@@ -389,23 +496,28 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6); /* Dark overlay for depth */
-  backdrop-filter: blur(8px); /* Blurred background for a modern look */
+  background: rgba(0, 0, 0, 0.6);
+  /* Dark overlay for depth */
+  backdrop-filter: blur(8px);
+  /* Blurred background for a modern look */
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999; /* Make sure it stays on top */
+  z-index: 9999;
+  /* Make sure it stays on top */
   animation: fadeIn 0.4s ease-in-out;
 }
 
 /* ======== Modal Content ======== */
 .post-modal__content {
-  background: #ffffff; /* Clean white background */
+  background: #ffffff;
+  /* Clean white background */
   border-radius: 20px;
   padding: 30px;
   width: 90%;
   max-width: 500px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); /* Subtle shadow for depth */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  /* Subtle shadow for depth */
   position: relative;
   text-align: center;
   animation: slideIn 0.5s ease-in-out;
@@ -444,7 +556,8 @@ export default {
   border-radius: 15px;
   margin-bottom: 20px;
   max-height: 200px;
-  object-fit: cover; /* Ensures the image stays within bounds */
+  object-fit: cover;
+  /* Ensures the image stays within bounds */
 }
 
 /* ======== Close Button ======== */
@@ -481,6 +594,7 @@ export default {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -491,11 +605,13 @@ export default {
     transform: translateY(-20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
   }
 }
+
 .dashboard-header {
   margin-bottom: 30px;
 }
@@ -509,29 +625,38 @@ export default {
 
 .search-bar {
   display: flex;
-  justify-content: center; /* Centers the search bar horizontally */
-  margin-bottom: 30px; /* Adds spacing between the search bar and other content */
+  justify-content: center;
+  /* Centers the search bar horizontally */
+  margin-bottom: 30px;
+  /* Adds spacing between the search bar and other content */
 }
 
 .search-bar input {
   width: 100%;
-  max-width: 500px; /* Increase width for a larger search bar */
-  padding: 12px 20px; /* More padding for a larger input field */
+  max-width: 500px;
+  /* Increase width for a larger search bar */
+  padding: 12px 20px;
+  /* More padding for a larger input field */
   border: 2px solid #ddd;
-  border-radius: 30px; /* Rounded corners for a more modern look */
+  border-radius: 30px;
+  /* Rounded corners for a more modern look */
   font-size: 1rem;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .search-bar input:focus {
-  border-color: #008080; /* Green border when focused */
-  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3); /* Light green shadow on focus */
+  border-color: #008080;
+  /* Green border when focused */
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+  /* Light green shadow on focus */
 }
 
 .search-bar input::placeholder {
-  color: #888; /* Lighter color for the placeholder */
+  color: #888;
+  /* Lighter color for the placeholder */
   font-style: italic;
-  font-size: 1rem; /* Adjust placeholder text size */
+  font-size: 1rem;
+  /* Adjust placeholder text size */
 }
 
 /* Add styles for the button (if applicable) */
@@ -563,17 +688,22 @@ export default {
 
 .card {
   background: white;
-  border-radius: 10px; /* Increased border radius for rounded corners */
+  border-radius: 10px;
+  /* Increased border radius for rounded corners */
   padding: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Slightly larger shadow for better depth */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  /* Slightly larger shadow for better depth */
   position: relative;
   margin-bottom: 20px;
   transition: all 0.3s ease-in-out;
   color: #008080;
 }
+
 .card:hover {
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2); /* Hover effect: increase shadow */
-  transform: translateY(-5px); /* Slight lift on hover */
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+  /* Hover effect: increase shadow */
+  transform: translateY(-5px);
+  /* Slight lift on hover */
 }
 
 .card-image {
@@ -882,6 +1012,7 @@ export default {
   max-height: 90vh;
   object-fit: contain;
 }
+
 /* ======== Edit Modal ======== */
 .edit-modal__overlay {
   position: fixed;
@@ -889,7 +1020,8 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7); /* Dark overlay */
+  background: rgba(0, 0, 0, 0.7);
+  /* Dark overlay */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1020,6 +1152,4 @@ export default {
   cursor: pointer;
   margin-right: 10px;
 }
-
-
 </style>
