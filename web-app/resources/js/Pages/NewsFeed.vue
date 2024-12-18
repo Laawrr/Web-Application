@@ -39,6 +39,7 @@
 
           <div class="flex justify-end mb-4">
             <button 
+              v-if="item.isFound"
               @click="handleClaim(item)"
               class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200"
             >
