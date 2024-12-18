@@ -4,41 +4,89 @@
       <main class="dashboard">
         <!-- Dashboard Header -->
         <section class="dashboard-header">
-          <h1>Lost and Found</h1>
           <div class="search-bar">
-            <input type="text" v-model="searchQuery" placeholder="Search for lost items..." @input="debouncedFilter" />
+            <input type="text" v-model="searchQuery" placeholder="Search for lost items..." @input="filterPosts" />
           </div>
         </section>
 
         <!-- Featured Posts -->
         <section class="featured-posts">
-          <div v-if="isLoading" class="loading-state">
-            <div class="spinner"></div>
-            <p>Loading posts...</p>
-          </div>
-          <div v-else-if="filteredPosts.length === 0" class="no-posts">
+          <div v-if="filteredPosts.length === 0" class="no-posts">
             <p>No posts found.</p>
           </div>
-          <div v-for="post in filteredPosts" :key="post.id" class="card">
-            <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image clickable"
-              @click="enlargeImage(post.image_url)" />
+          <div v-for="post in filteredPosts" :key="post.id" class="card clickable" @click="openPostModal(post)">
+            <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image" />
             <p class="post-date">{{ post.lost_date || post.found_date }}</p>
-
             <p class="post-info"><strong>Status:</strong> {{ post.isFound ? 'Found' : 'Lost' }}</p>
             <p class="post-info"><strong>Category:</strong> {{ post.category }}</p>
             <p class="post-info"><strong>Description:</strong> {{ post.description }}</p>
-            <p class="post-info"><strong>Facebook:</strong> {{ post.facebook_link }}</p>
-            <p class="post-info"><strong>Contact:</strong> {{ post.contact_number }}</p>
-            <button @click="deletePost(post.id)" class="delete-btn">
-              <span class="delete-icon">&#10005;</span>
-            </button>
           </div>
         </section>
 
-        <!-- Upload Form Modal -->
+        <!-- Post Detail Modal -->
+        <div v-if="showPostModal" class="post-modal__overlay" @click="closePostModal">
+          <div class="post-modal__content" @click.stop>
+            <h2 class="post-modal__title">Item Details</h2>
+
+            <img v-if="currentPost.image_url" 
+                 :src="currentPost.image_url" 
+                 alt="Item Image" 
+                 class="post-modal__image" />
+            
+            <div class="post-modal__info">
+              <p class="post-modal__text"><strong>Item Name:</strong> {{ currentPost.item_name }}</p>
+              <p class="post-modal__text"><strong>Status:</strong> {{ currentPost.isFound ? 'Found' : 'Lost' }}</p>
+              <p class="post-modal__text"><strong>Category:</strong> {{ currentPost.category }}</p>
+              <p class="post-modal__text"><strong>Description:</strong> {{ currentPost.description }}</p>
+              <p class="post-modal__text"><strong>Facebook:</strong> {{ currentPost.facebook_link }}</p>
+              <p class="post-modal__text"><strong>Contact:</strong> {{ currentPost.contact_number }}</p>
+            </div>
+
+            <!-- Edit Button -->
+            <button @click="openEditModal" class="post-modal__edit-btn">Edit</button>
+
+            <!-- Close Button -->
+            <button @click="closePostModal" class="post-modal__close-btn">Close</button>
+          </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div v-if="showEditModal" class="edit-modal__overlay" @click="closeEditModal">
+          <div class="edit-modal__content" @click.stop>
+            <h2 class="edit-modal__title">Edit Item</h2>
+
+            <form @submit.prevent="submitEditForm">
+              <div class="form-group">
+                <label for="editItemName">Item Name</label>
+                <input type="text" id="editItemName" v-model="currentPost.item_name" required />
+              </div>
+              <div class="form-group">
+                <label for="editDescription">Description</label>
+                <textarea id="editDescription" v-model="currentPost.description" required></textarea>
+              </div>
+              <div class="form-group">
+                <label for="editFacebook">Facebook</label>
+                <input type="text" id="editFacebook" v-model="currentPost.facebook_link" required />
+              </div>
+              <div class="form-group">
+                <label for="editContact">Contact</label>
+                <input type="text" id="editContact" v-model="currentPost.contact_number" required />
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="submit-btn">Save Changes</button>
+                <button type="button" @click="closeEditModal" class="cancel-btn">Cancel</button>
+              </div>
+            </form>
+
+            <!-- Close Button for Edit Modal -->
+            <button @click="closeEditModal" class="edit-modal__close-btn">Close</button>
+          </div>
+        </div>
+
+        <!-- Upload Form Modal (unchanged) -->
         <div v-if="showUploadForm" class="modal-overlay">
           <div class="modal-content">
-
             <h2 style="font-size: 25px; font-weight: bolder;" class="mb-3">Add Item</h2>
 
             <form @submit.prevent="submitForm" enctype="multipart/form-data">
@@ -91,7 +139,7 @@
                   </div>
                   <div class="form-group">
                     <label for="contactNumber">Contact Number</label>
-                    <input type="number" id="contactNumber" v-model="newItem.contact_number" required />
+                    <input type="tel" id="contactNumber" v-model="newItem.contact_number" required />
                   </div>
                   <div class="form-group">
                     <label for="itemImage">Upload Image</label>
@@ -100,21 +148,22 @@
                       class="image-preview" />
                   </div>
                 </div>
+
+                <!-- Right Column -->
                 <div class="form-column">
                   <div class="map-wrapper">
                     <div class="map-area">
                       <div class="map-container" :class="{ enabled: mapEnabled }">
-                        <Map ref="mapComponent" @location-selected="updateLocation" :disabled="false" />
+                        <Map ref="mapComponent" @location-selected="updateLocation" :disabled="!mapEnabled" />
                         <div class="map-blur-overlay" :class="{ enabled: mapEnabled }"></div>
                       </div>
                       <div class="map-controls">
-                        <div class="map-overlay" v-if="!locationSelected">
+                        <div class="map-overlay" v-if="!mapEnabled">
                           <button class="add-location-btn" @click="enableLocationSelection">
-                            <i class="fas fa-map-marker-alt"></i>
-                            Add Location (Click to Enable Map)
+                            <i class="fas fa-map-marker-alt"></i> Add Location (Click to Enable Map)
                           </button>
                         </div>
-                        <div v-if="locationSelected" class="location-status" style="margin-bottom: 340px">
+                        <div v-if="locationSelected" class="location-status">
                           <span v-if="newItem.location">Location selected ✓</span>
                           <span v-else>Click on the map to place a pin</span>
                         </div>
@@ -123,6 +172,7 @@
                   </div>
                 </div>
               </div>
+
               <div class="form-actions">
                 <button type="button" @click="closeUploadForm" class="cancel-btn">Cancel</button>
                 <button type="submit" class="submit-btn" :disabled="isSubmitting || !newItem.location">
@@ -137,6 +187,7 @@
         <div v-if="enlargedImage" class="modal-overlay" @click="closeImage">
           <img :src="enlargedImage" alt="Enlarged view" class="enlarged-image" />
         </div>
+
       </main>
 
       <button class="floating-btn" @click="showUploadForm = true">
@@ -147,15 +198,22 @@
 </template>
 
 <script>
-import Map from "./map.vue";
+import Map from '@/components/Map.vue'; // Ensure the path is correct
 import axios from "axios";
-import { debounce } from 'lodash';
 
 export default {
-  components: { Map },
+  components: {
+    Map,
+  },
   data() {
     return {
-      isLoading: false,
+      posts: [],
+      filteredPosts: [],
+      searchQuery: "",
+      currentPost: null,  // Holds the current post for modal display
+      showPostModal: false,  // Controls the visibility of the post modal
+      showEditModal: false,
+      showUploadForm: false,  // Controls the visibility of the edit modal
       newItem: {
         item_name: "",
         status: "",
@@ -168,86 +226,103 @@ export default {
         location: null,
         image_file: null,
         image_preview_url: null,
-        user_id: null,
+        user_id: null
       },
-      posts: [],
-      filteredPosts: [],
-      searchQuery: "",
-      showUploadForm: false,
-      enlargedImage: null,
+      isSubmitting: false,
       locationSelected: false,
       mapEnabled: false,
-      isSubmitting: false,
-      containerStyle: {
-        minHeight: '100vh',
-        paddingBottom: '100px', // Initial padding
-      }
+      containerStyle: { paddingBottom: '100px' },
+      enlargedImage: null,
     };
   },
+
   created() {
-    this.debouncedFilter = debounce(this.filterPosts, 300);
-    this.fetchUserId().then(() => this.fetchPosts());
-  },
-  watch: {
-    posts: {
-      handler(newPosts) {
-        this.updateSpacing(newPosts);
-      },
-      deep: true
-    }
+    this.fetchPosts();
   },
   methods: {
-    async fetchUserId() {
-      try {
-        const response = await axios.get(window.userID);
-        this.newItem.user_id = response.data.id;
-      } catch (error) {
-        console.error("Error fetching user ID:", error.message);
-        this.showError("Failed to fetch user ID");
-      }
+    showError(message) {
+      alert(message);
     },
+    // Method to open the post modal
+    openPostModal(post) {
+      this.currentPost = post;
+      this.showPostModal = true;
+    },
+    updateLocation(location) {
+      console.log('Location selected:', location); 
+      this.newItem.location = location; 
+    },  
+    enableLocationSelection() {
+      console.log('Map enabled!'); 
+      this.mapEnabled = true;
+    },
+
+    // Method to close the post modal
+    closePostModal() {
+      this.showPostModal = false;
+      this.currentPost = null;
+    },
+    
+    // Method to open the edit modal
+    openEditModal() {
+      this.showEditModal = true;
+    },
+    
+    // Method to close the edit modal
+    closeEditModal() {
+      this.showEditModal = false;
+    },
+    
+    // Method to submit the edited form
+    submitEditForm() {
+      // Logic to submit the edited post details
+      console.log('Edited Post:', this.currentPost);
+      this.closeEditModal(); // Close the edit modal after saving
+    },
+
+    // Fetch the posts from the server
     async fetchPosts() {
-      this.isLoading = true;
       try {
         const [lostResponse, foundResponse] = await Promise.all([
           axios.get(window.lostItemsUrl),
           axios.get(window.foundItemsUrl),
         ]);
-
-        // Process the data in batches
-        const processItems = (items, isFound) => {
-          return items
-            .filter(post => post.user_id === this.newItem.user_id)
-            .map(post => ({ ...post, isFound }));
-        };
-
-        const lostPosts = processItems(lostResponse.data, false);
-        const foundPosts = processItems(foundResponse.data, true);
-
+        const lostPosts = lostResponse.data.map(post => ({ ...post, isFound: false }));
+        const foundPosts = foundResponse.data.map(post => ({ ...post, isFound: true }));
         this.posts = [...lostPosts, ...foundPosts];
         this.filterPosts();
       } catch (error) {
         console.error("Error fetching posts:", error.message);
-        this.showError("Failed to fetch posts");
-      } finally {
-        this.isLoading = false;
       }
     },
+    
+    // Filter posts based on the search query
     filterPosts() {
-      const query = this.searchQuery.toLowerCase();
-      this.filteredPosts = query
-        ? this.posts.filter(post => 
-            post.item_name.toLowerCase().includes(query) ||
-            post.description.toLowerCase().includes(query) ||
-            post.category.toLowerCase().includes(query)
-          )
-        : [...this.posts];
+      this.filteredPosts = this.posts.filter((post) =>
+        post.item_name.toLowerCase().includes(this.searchQuery.toLowerCase())
+      );
     },
+    
+    // Handle delete post
+    async deletePost(postId) {
+      if (confirm("Are you sure you want to delete this post?")) {
+        try {
+          await axios.delete(`/path-to-delete-post/${postId}`);
+          this.posts = this.posts.filter(post => post.id !== postId);
+          this.filteredPosts = this.filteredPosts.filter(post => post.id !== postId);
+          alert("Post deleted successfully!");
+        } catch (error) {
+          console.error("Error deleting post:", error.message);
+        }
+      }
+    },
+
+    // Handle file upload
     handleFileUpload(event) {
       const file = event.target.files[0];
       if (file) {
         this.newItem.image_file = file;
-
+        
         // Create a preview URL
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -256,196 +331,227 @@ export default {
         reader.readAsDataURL(file);
       }
     },
-    resetNewItem() {
-      this.newItem = {
-        item_name: "",
-        status: "",
-        category: "",
-        lost_date: "",
-        found_date: "",
-        description: "",
-        facebook_link: "",
-        contact_number: "",
-        location: null,
-        image_file: null,
-        image_preview_url: null,
-        user_id: this.newItem.user_id,
-      };
-    },
-    updateLocation(location) {
-      this.newItem.location = location;
-      this.locationSelected = true;
-    },
+    
+    // Submit the upload form
     async submitForm() {
-      if (!this.newItem.location) {
-        this.showError("Please select a location on the map first");
-        return;
-      }
-
-      this.isSubmitting = true;
       try {
+        this.isSubmitting = true;
         const formData = new FormData();
-
-        // Handle the image file
-        if (this.newItem.image_file) {
-          formData.append('image_url', this.newItem.image_file);
-        }
-
-        // Handle all other form fields
-        const formFields = {
-          item_name: this.newItem.item_name,
-          status: this.newItem.status,
-          category: this.newItem.category,
-          description: this.newItem.description,
-          facebook_link: this.newItem.facebook_link,
-          contact_number: this.newItem.contact_number,
-          user_id: this.newItem.user_id,
-          latitude: this.newItem.location.lat,
-          longitude: this.newItem.location.lng
-        };
-
-        formFields.location = `${this.newItem.location.lat},${this.newItem.location.lng}`;
-
-        // Add lost_date or found_date based on status
-        if (this.newItem.status === 'Lost') {
-          formFields.lost_date = this.newItem.lost_date;
-        } else {
-          formFields.found_date = this.newItem.found_date;
-        }
-
-        // Append all form fields
-        Object.keys(formFields).forEach(key => {
-          if (formFields[key] !== null && formFields[key] !== undefined) {
-            formData.append(key, formFields[key]);
-          }
+        Object.keys(this.newItem).forEach(key => {
+          formData.append(key, this.newItem[key]);
         });
-
-        // Get CSRF token from meta tag
-        const token = document.head.querySelector('meta[name="csrf-token"]');
-
-        if (!token) {
-          this.showError("CSRF token not found. Please refresh the page.");
-          return;
-        }
-
-        // Add CSRF token to form data
-        formData.append('_token', token.content);
-
-        const url = this.newItem.status === "Lost" ? window.lostItemsStore : window.foundItemsStore;
-
-        const response = await axios.post(url, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "X-CSRF-TOKEN": token.content,
-            "X-Requested-With": "XMLHttpRequest"
-          },
-          withCredentials: true
-        });
-
-        this.showSuccess("Post created successfully!");
-        this.closeUploadForm();
-        await this.fetchPosts();
+        
+        const response = await axios.post('/path-to-upload-post', formData);
+        
+        alert('Post submitted successfully');
+        this.showUploadForm = false;
       } catch (error) {
-        console.error('Form Data:', this.newItem);
-        if (error.response && error.response.status === 422) {
-          // Handle validation errors
-          const validationErrors = error.response.data.errors;
-          const errorMessages = Object.values(validationErrors)
-            .flat()
-            .join('\n');
-          this.showError("Validation failed:\n" + errorMessages);
-        } else {
-          this.showError("Error creating post: " + error.message);
-        }
+        console.error('Error submitting form:', error.message);
+        this.showError('Error submitting the form');
       } finally {
         this.isSubmitting = false;
       }
     },
 
-    showError(message) {
-      // Replace alert with a more user-friendly error display
-      const errorLines = message.split('\n');
-      const formattedMessage = errorLines.join('\n• ');
-      alert("• " + formattedMessage);
-    },
-    showSuccess(message) {
-      alert(message);
-    },
+    // Close the upload form modal
     closeUploadForm() {
       this.showUploadForm = false;
-      this.resetNewItem();
-      this.locationSelected = false;
-      this.mapEnabled = false;
+      this.newItem = {};  // Reset the newItem data
     },
+
+    // Enlarging the image on click
     enlargeImage(imageUrl) {
       this.enlargedImage = imageUrl;
     },
+
+    // Close the enlarged image view
     closeImage() {
       this.enlargedImage = null;
-    },
-    async deletePost(postId) {
-      if (confirm("Are you sure you want to delete this post?")) {
-        try {
-          const post = this.posts.find(p => p.id === postId);
-          const url = post.isFound ? window.foundItemsUrl : window.lostItemsUrl;
-          await axios.delete(`${url}/${postId}`, {
-            headers: {
-              "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-            },
-          });
-
-          // Remove post from both arrays
-          this.posts = this.posts.filter(post => post.id !== postId);
-          this.filteredPosts = this.filteredPosts.filter(post => post.id !== postId);
-
-          alert("Post deleted successfully!");
-        } catch (error) {
-          console.error("Error deleting post:", error);
-          alert("Error deleting post: " + error.message);
-        }
-      }
-    },
-    enableLocationSelection() {
-      this.locationSelected = true;
-      this.mapEnabled = true;
-    },
-    updateSpacing(posts) {
-      const baseSpacing = 100; // Base padding
-      const rowCount = Math.ceil(posts.length / 3);
-      const additionalSpacing = rowCount > 2 ? (rowCount - 2) * 20 : 0; // Add 20px for each row beyond 2
-      this.containerStyle.paddingBottom = `${baseSpacing + additionalSpacing}px`;
-    },
-  },
+    }
+  }
 };
 </script>
+
+
 <style scoped>
 .dashboard-container {
   padding: 20px;
-  background-color: #f3f4f6;
+  background-color: #f5f5f5;
   transition: all 0.3s ease;
   min-height: 100vh;
   position: relative;
 }
 
-.dashboard {
-  padding: 0;  
+/* ======== Modal Overlay ======== */
+.post-modal__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6); /* Dark overlay for depth */
+  backdrop-filter: blur(8px); /* Blurred background for a modern look */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Make sure it stays on top */
+  animation: fadeIn 0.4s ease-in-out;
 }
 
-.featured-posts {
-  padding: 2rem;  
+/* ======== Modal Content ======== */
+.post-modal__content {
+  background: #ffffff; /* Clean white background */
+  border-radius: 20px;
+  padding: 30px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); /* Subtle shadow for depth */
+  position: relative;
+  text-align: center;
+  animation: slideIn 0.5s ease-in-out;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
+.post-modal__title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.post-modal__info {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.post-modal__text {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.post-modal__text strong {
+  color: #222;
+  font-weight: bold;
+}
+
+.post-modal__image {
+  width: 100%;
+  border-radius: 15px;
+  margin-bottom: 20px;
+  max-height: 200px;
+  object-fit: cover; /* Ensures the image stays within bounds */
+}
+
+/* ======== Close Button ======== */
+.post-modal__close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #ff4b5c;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.post-modal__close-btn:hover {
+  background: #ff2c3c;
+  transform: rotate(90deg);
+}
+
+.post-modal__close-btn:active {
+  transform: scale(0.95);
+}
+
+/* ======== Animations ======== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 .dashboard-header {
   margin-bottom: 30px;
 }
 
+.dashboard {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.search-bar {
+  display: flex;
+  justify-content: center; /* Centers the search bar horizontally */
+  margin-bottom: 30px; /* Adds spacing between the search bar and other content */
+}
+
 .search-bar input {
   width: 100%;
-  max-width: 400px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  max-width: 500px; /* Increase width for a larger search bar */
+  padding: 12px 20px; /* More padding for a larger input field */
+  border: 2px solid #ddd;
+  border-radius: 30px; /* Rounded corners for a more modern look */
+  font-size: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.search-bar input:focus {
+  border-color: #008080; /* Green border when focused */
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3); /* Light green shadow on focus */
+}
+
+.search-bar input::placeholder {
+  color: #888; /* Lighter color for the placeholder */
+  font-style: italic;
+  font-size: 1rem; /* Adjust placeholder text size */
+}
+
+/* Add styles for the button (if applicable) */
+.search-bar button {
+  padding: 12px 20px;
+  margin-left: 10px;
+  background-color: #008080;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.search-bar button:hover {
+  background-color: #006666;
+}
+
+.search-bar button:active {
+  background-color: #004d4d;
 }
 
 .featured-posts {
@@ -457,11 +563,17 @@ export default {
 
 .card {
   background: white;
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 10px; /* Increased border radius for rounded corners */
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Slightly larger shadow for better depth */
   position: relative;
   margin-bottom: 20px;
+  transition: all 0.3s ease-in-out;
+  color: #008080;
+}
+.card:hover {
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2); /* Hover effect: increase shadow */
+  transform: translateY(-5px); /* Slight lift on hover */
 }
 
 .card-image {
@@ -770,28 +882,144 @@ export default {
   max-height: 90vh;
   object-fit: contain;
 }
-
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
+/* ======== Edit Modal ======== */
+.edit-modal__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7); /* Dark overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
 }
 
-.spinner {
+.edit-modal__content {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 30px;
+  width: 80%;
+  max-width: 600px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  position: relative;
+  text-align: center;
+  animation: slideIn 0.5s ease-in-out;
+}
+
+/* Edit Modal Title */
+.edit-modal__title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+/* Edit Modal Close Button */
+.edit-modal__close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #ff4b5c;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
   width: 40px;
   height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.edit-modal__close-btn:hover {
+  background: #ff2c3c;
+  transform: rotate(90deg);
 }
+
+.edit-modal__close-btn:active {
+  transform: scale(0.95);
+}
+
+/* ======== Edit Button in the Item Modal ======== */
+.post-modal__edit-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: #008080;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.post-modal__edit-btn:hover {
+  background: #45a049;
+}
+
+.post-modal__edit-btn:active {
+  transform: scale(0.95);
+}
+
+/* Styling for input fields and form */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.submit-btn {
+  background-color: #008080;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  margin-right: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 100px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.submit-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+
 </style>
