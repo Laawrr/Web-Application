@@ -18,6 +18,7 @@ use Inertia\Inertia;
 
 
 Route::resource('users', UserController::class);
+Route::put('/users/{id}/edit', [UserController::class, 'update']);
 Route::get('/user-id', [UserController::class, 'getID'])->name('user.id');
 // API route to log user activity
 Route::post('/log-activity', [ActivityLogController::class, 'logUserActivity']);
