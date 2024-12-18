@@ -124,6 +124,7 @@ const handleSignOut = () => {
     router.post(route('logout'), {}, {
         onFinish: () => {
             isProfileOpen.value = false;
+            window.location.href = '/';  
         },
     });
 };
