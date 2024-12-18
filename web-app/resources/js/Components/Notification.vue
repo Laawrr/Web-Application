@@ -1,6 +1,6 @@
 <template>
-  <div class="relative" ref="notificationRef">
-    <button class="relative focus:outline-none" @click.stop="toggleDropdown">
+  <div class="relative" @click="toggleDropdown">
+    <button class="relative focus:outline-none">
       <svg class="w-6 h-6 text-gray-600 hover:text-teal-500" fill="none" stroke="currentColor" stroke-width="2"
         viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path stroke-linecap="round" stroke-linejoin="round"
@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
 const isOpen = ref(false);
@@ -56,42 +56,10 @@ const notifications = ref([]);
 const users = ref({});
 const items = ref({});
 const currentUserId = ref(null);
-const notificationRef = ref(null);
 
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
-  emit('dropdown-toggled', isOpen.value);
 };
-
-const closeDropdown = () => {
-  isOpen.value = false;
-  emit('dropdown-toggled', false);
-};
-
-// Close when clicking outside
-const handleClickOutside = (event) => {
-  if (notificationRef.value && !notificationRef.value.contains(event.target)) {
-    closeDropdown();
-  }
-};
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
-  fetchCurrentUser();
-  fetchUsers();
-  fetchItems();
-  fetchNotifications();
-});
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-});
-
-const emit = defineEmits(['dropdown-toggled']);
-
-defineExpose({
-  closeDropdown
-});
 
 const fetchCurrentUser = async () => {
   try {
@@ -171,6 +139,13 @@ const markAsRead = async (id) => {
     console.error('Error marking notification as read:', error);
   }
 };
+
+onMounted(async () => {
+  await fetchCurrentUser();
+  await fetchUsers();
+  await fetchItems();
+  await fetchNotifications();
+});
 </script>
 
 <style scoped>
