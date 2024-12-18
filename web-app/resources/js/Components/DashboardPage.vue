@@ -6,14 +6,15 @@
         <section class="dashboard-header">
           <div class="search-bar">
             <input type="text" v-model="searchQuery" placeholder="Search for lost items..." @input="filterPosts" />
+            <div v-if="isLoading" class="loading-spinner flex items-center">
+            <div class="animate-spin rounded-full ms-5 border-t-4 border-blue-500 w-8 h-8"></div>
+            <p class="ms-3">Loading...</p>
+          </div>
           </div>
         </section>
 
         <!-- Featured Posts -->
         <section class="featured-posts">
-          <div v-if="filteredPosts.length === 0" class="no-posts">
-            <p>No posts found.</p>
-          </div>
           <div v-for="post in filteredPosts" :key="post.id" class="card clickable" @click="openPostModal(post)">
             <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image" />
             <p class="post-date">{{ post.lost_date || post.found_date }}</p>
@@ -26,10 +27,6 @@
         <!-- Post Detail Modal -->
         <div v-if="showPostModal" class="post-modal__overlay" @click="closePostModal">
           <div class="post-modal__content" @click.stop>
-            <button @click="closePostModal" class="post-modal__close-btn">
-              <span>&times;</span>
-            </button>
-            
             <h2 class="post-modal__title">Item Details</h2>
 
             <img v-if="currentPost.image_url" :src="currentPost.image_url" alt="Item Image" class="post-modal__image" />
@@ -45,18 +42,20 @@
 
             <!-- Edit Button -->
             <button @click="openEditModal" class="post-modal__edit-btn">Edit</button>
+
+          n>
           </div>
         </div>
 
        <!-- Edit Modal -->
        <div v-if="showEditModal" class="edit-modal__overlay" @click="closeEditModal">
-        <div class="edit-modal__content" @click.stop>
-          <h2 class="edit-modal__title">Edit Item</h2>
+  <div class="edit-modal__content" @click.stop>
+    <h2 class="edit-modal__title">Edit Item</h2>
 
-          <form @submit.prevent="submitEditForm">
-            <div class="form-group">
-              <label for="editItemName">Item Name</label>
-              <input type="text" id="editItemName" v-model="currentPost.item_name" required />
+    <form @submit.prevent="submitEditForm">
+      <div class="form-group">
+        <label for="editItemName">Item Name</label>
+        <input type="text" id="editItemName" v-model="currentPost.item_name" required />
       </div>
 
       <!-- Category Dropdown -->
@@ -92,7 +91,7 @@
       <!-- Image Upload Section -->
       <div class="form-group">
         <label for="editImage">Upload New Image</label>
-        <input type="file" id="editImage" @change="handleEditImageUpload" accept="image/*" />
+        <input type="file" id="editImage" @change="handleImageUpload" accept="image/*" />
       </div>
 
       <!-- Image Preview Section (optional) -->
@@ -264,13 +263,6 @@ export default {
       showPostModal: false,
       showEditModal: false,
       currentPost: {},
-      snackbar: {
-        show: false,
-        message: '',
-        color: 'success'
-      },
-      imagePreviewUrl: null,
-      selectedImage: null,
     };
   },
   created() {
@@ -539,81 +531,16 @@ export default {
     closeEditModal() {
       this.showEditModal = false;
     },
-    handleEditImageUpload(event) {
-      const file = event.target.files[0];
-      if (file) {
-        this.selectedImage = file;
-        this.imagePreviewUrl = URL.createObjectURL(file);
-      }
+    submitEditForm() {
+      // Handle the form submission logic for editing a post
+      this.showEditModal = false;
+      this.showSuccess("Post updated successfully!");
     },
-    clearImagePreview() {
-      this.imagePreviewUrl = null;
-      this.selectedImage = null;
-    },
-    async submitEditForm() {
-      try {
-        this.isSubmitting = true;
 
-        // Create FormData to handle file upload
-        const formData = new FormData();
-        formData.append('item_name', this.currentPost.item_name);
-        formData.append('category', this.currentPost.category);
-        formData.append('description', this.currentPost.description);
-        formData.append('facebook_link', this.currentPost.facebook_link || '');
-        formData.append('contact_number', this.currentPost.contact_number);
-
-        // Append image if selected
-        if (this.selectedImage) {
-          formData.append('image_url', this.selectedImage);
-        }
-
-        // Make the API call to update the post
-        const response = await axios.post(`/lost-items/${this.currentPost.id}`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          params: {
-            _method: 'PUT' // Laravel will treat this as PUT request
-          }
-        });
-
-        if (response.status === 200) {
-          // Update the local post data
-          const postIndex = this.posts.findIndex(post => post.id === this.currentPost.id);
-          if (postIndex !== -1) {
-            this.posts[postIndex] = { ...this.posts[postIndex], ...response.data.data };
-          }
-
-          // Show success message
-          this.showSuccess('Post updated successfully!');
-
-          // Clear image preview
-          this.clearImagePreview();
-
-          // Close the edit modal
-          this.closeEditModal();
-
-          // Refresh the posts list
-          await this.fetchPosts();
-        }
-      } catch (error) {
-        console.error('Error updating post:', error);
-        let errorMessage = 'Failed to update post. Please try again.';
-        
-        if (error.response) {
-          if (error.response.status === 404) {
-            errorMessage = 'Post not found.';
-          } else if (error.response.status === 422) {
-            const validationErrors = error.response.data.errors;
-            errorMessage = Object.values(validationErrors).flat().join('\n');
-          }
-        }
-        
-        this.showError(errorMessage);
-      } finally {
-        this.isSubmitting = false;
-      }
-    },
+    // Display success message (you can customize this)
+    showSuccess(message) {
+      alert(message); // Simple alert for now, or use a custom notification system
+    }
   } 
 };
 </script>
@@ -845,30 +772,56 @@ export default {
 /* ======== Close Button ======== */
 .post-modal__close-btn {
   position: absolute;
-  top: 10px; /* Keeps it close to the top */
-  right: 10px; /* Keeps it close to the right edge */
-  background: #ff4b5c; /* A softer shade of red */
+  top: 15px; /* Keeps it close to the top */
+  right: 15px; /* Keeps it close to the right edge */
+  background: #ff6f61; /* A softer shade of red */
   color: #fff;
   border: none;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  font-size: 20px;
+  border-radius: 8px; /* Rounded corners for a modern look */
+  padding: 10px 20px; /* Adjusted padding for a rectangular shape */
+  font-size: 1rem; /* Adjusted font size */
+  font-weight: bold;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  z-index: 1000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
 }
 
 .post-modal__close-btn:hover {
-  background: #ff3545; /* Darker red on hover */
+  background: #ff4b5c; /* Darker red on hover */
+  transform: translateY(-2px); /* Slight upward movement on hover */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
 }
 
-.post-modal__close-btn span {
-  line-height: 1;
-  margin-bottom: 2px;
+.post-modal__close-btn:focus {
+  outline: none; /* Removes the default focus outline */
+  border: 2px solid #ff4b5c; /* Adds a subtle border on focus */
+}
+
+
+/* ======== Animations ======== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .dashboard-header {
@@ -938,41 +891,133 @@ export default {
   background-color: #004d4d;
 }
 
+/* === Featured Posts Section === */
 .featured-posts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-bottom: 40px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* Flexible layout */
+  gap: 25px;
+  padding: 20px 10px;
+  margin-bottom: 50px;
 }
 
+/* === Card Styles === */
 .card {
-  background: white;
-  border-radius: 10px;
-  /* Increased border radius for rounded corners */
-  padding: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  /* Slightly larger shadow for better depth */
+  background: linear-gradient(135deg, #f8f8f8, #e0e0e0); /* Subtle gradient background */
+  border-radius: 20px; /* Rounded corners for smoothness */
+  padding: 30px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05); /* Elegant deep shadow */
   position: relative;
-  margin-bottom: 20px;
-  transition: all 0.3s ease-in-out;
-  color: #008080;
+  color: #333; /* Dark gray text for readability */
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out; /* Smooth transition for hover effects */
+  color:#008080;
 }
 
+/* === Hover Effect - Card Elevation === */
 .card:hover {
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-  /* Hover effect: increase shadow */
-  transform: translateY(-5px);
-  /* Slight lift on hover */
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1); /* Deeper shadow */
+  transform: translateY(-12px); /* Lift effect */
+  transition: all 0.4s ease-in-out;
 }
 
+/* === Card Image Styling === */
 .card-image {
   width: 100%;
-  height: 200px;
+  height: 250px; /* Larger image height */
   object-fit: cover;
-  border-radius: 4px;
-  margin-bottom: 10px;
+  border-radius: 15px; /* Rounded corners for images */
+  margin-bottom: 20px;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* === Hover Effect on Image */
+.card-image:hover {
+  transform: scale(1.1); /* Smooth zoom-in effect */
+}
+
+/* === Card Title Styling === */
+.card-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #2c3e50; /* Dark gray title */
+  margin-bottom: 15px;
+  letter-spacing: 0.5px;
+  text-transform: capitalize;
+}
+
+/* === Card Description Styling === */
+.card-text {
+  font-size: 1rem;
+  color: #555; /* Lighter text color for description */
+  line-height: 1.6;
+  margin-bottom: 25px;
+  transition: color 0.3s ease; /* Smooth color transition */
+}
+
+/* === Card Hover Effect on Description === */
+.card:hover .card-text {
+  color: #2c3e50; /* Darker color on hover */
+}
+
+/* === Call to Action Button Styling === */
+.card-button {
+  background-color: #3498db; /* Blue button color */
+  color: #fff; /* White text */
+  padding: 12px 25px;
+  border-radius: 25px; /* Rounded button */
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  text-align: center;
+  border: none;
+  transition: background-color 0.3s ease, transform 0.3s ease; /* Smooth button transition */
+  display: inline-block;
+  margin-top: 20px;
   cursor: pointer;
 }
+
+.card-button:hover {
+  background-color: #2980b9; /* Darker blue button on hover */
+  transform: scale(1.05); /* Slight scaling effect */
+}
+
+/* === Hover Effect - Card Button Glow === */
+.card-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(52, 152, 219, 0.1); /* Subtle blue glow effect */
+  z-index: -1;
+  border-radius: 25px;
+  transition: all 0.3s ease-in-out;
+}
+
+.card-button:hover::before {
+  opacity: 1; /* Show the glow effect on hover */
+}
+
+/* === Card Hover Effects - Animation === */
+.card:hover .card-image {
+  transform: scale(1.1);
+  transition: all 0.3s ease-in-out;
+}
+
+/* === Card Bottom Shadow for Depth === */
+.card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.1); /* Soft shadow at the bottom for depth */
+  border-radius: 0 0 20px 20px;
+}
+
 
 .modal-overlay {
   position: fixed;
@@ -1193,7 +1238,6 @@ export default {
   height: 20px;
   border: 3px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  /* This makes the spinner round */
   border-top-color: #fff;
   animation: spin 1s ease-in-out infinite;
 }
@@ -1243,7 +1287,7 @@ export default {
   color: white;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1258,7 +1302,7 @@ export default {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background-color: rgba(255, 0, 0, 0.7);
+  background: rgba(255, 0, 0, 0.7);
   color: white;
   border: none;
   cursor: pointer;

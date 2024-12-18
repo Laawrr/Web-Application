@@ -36,12 +36,10 @@
           <div v-if="item.image_url" class="mb-4 overflow-hidden rounded-lg">
             <img :src="item.image_url" alt="Lost Item" class="w-full object-cover rounded-lg shadow-sm" />
           </div>
-
-          <div class="flex justify-end mb-4">
+          <div class="flex justify-end">
             <button 
-              v-if="item.isFound"
               @click="handleClaim(item)"
-              class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200"
+              class="bg-green-500 hover:bg-green-600 mt-5 text-white px-4 py-2 rounded-lg flex  items-center space-x-2 transition-colors duration-200"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -51,7 +49,7 @@
           </div>
 
           <!-- Comments Section -->
-          <div class="mt-6">
+          <div class="">
             <h3 class="text-lg font-semibold text-gray-800 mb-2">Comments</h3>
 
             <!-- Comment Button -->
@@ -360,5 +358,325 @@ export default {
 </script>
 
 <style scoped>
+/* === Global Layout Improvements === */
+body {
+  font-family: 'Arial', sans-serif;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.bg-gray-100 {
+  background-color: #f3f4f6;
+}
+
+.bg-white {
+  background-color: #ffffff;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-blue-900 {
+  color: #1e3a8a;
+}
+
+.text-gray-700 {
+  color: #4b5563;
+}
+
+.text-gray-800 {
+  color: #374151;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+}
+
+.max-w-5xl {
+  max-width: 64rem;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.p-6 {
+  padding: 1.5rem;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.md\\:px-8 {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.py-12 {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+
+/* === Loading Spinner === */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.loading-spinner .animate-spin {
+  width: 50px;
+  height: 50px;
+  border-width: 4px;
+}
+
+.loading-spinner p {
+  margin-left: 0.75rem;
+  font-size: 1.25rem;
+  color: #555;
+}
+
+/* === Post Cards === */
+.bg-white {
+  background-color: #ffffff;
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+}
+
+.rounded-2xl {
+  border-radius: 1rem;
+}
+
+.mb-8 {
+  margin-bottom: 2rem;
+}
+
+.p-6 {
+  padding: 1.5rem;
+}
+
+.hover\\:shadow-2xl:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.hover\\:scale-102:hover {
+  transform: scale(1.02);
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+/* === Labels for Lost / Found === */
+.bg-red-100 {
+  background-color: #fee2e2;
+}
+
+.text-red-700 {
+  color: #b91c1c;
+}
+
+.bg-green-100 {
+  background-color: #d1fae5;
+}
+
+.text-green-700 {
+  color: #047857;
+}
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.py-1 {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.px-3 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}
+
+.inline-block {
+  display: inline-block;
+}
+
+/* === Post Header === */
+.text-xl {
+  font-size: 1.25rem;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.space-x-4 {
+  display: flex;
+  gap: 1rem;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+/* === Description Section === */
+.text-base {
+  font-size: 1rem;
+}
+
+.text-gray-700 {
+  color: #4b5563;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+/* === Image Section === */
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.rounded-lg {
+  border-radius: 0.75rem;
+}
+
+.img {
+  width: 100%;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* === Claim Button === */
+button {
+  border: none;
+  outline: none;
+}
+
+.bg-green-500 {
+  background-color: #10b981;
+}
+
+.hover\\:bg-green-600:hover {
+  background-color: #059669;
+}
+
+.text-white {
+  color: #ffffff;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.rounded-lg {
+  border-radius: 0.75rem;
+}
+
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.space-x-2 {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.transition-colors {
+  transition: color 0.3s ease;
+}
+
+.duration-200 {
+  transition-duration: 200ms;
+}
+
+/* === Comments Section === */
+.mt-6 {
+  margin-top: 1.5rem;
+}
+
+.text-lg {
+  font-size: 1.125rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.text-blue-500 {
+  color: #3b82f6;
+}
+
+.hover\\:text-blue-600:hover {
+  color: #2563eb;
+}
+
+/* === Footer Section === */
+footer {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1rem;
+  text-align: center;
+}
+
 
 </style>
