@@ -2,7 +2,6 @@
   <div class="flex flex-col min-h-screen bg-gray-100">
     <!-- Header -->
     <HeaderBar class="w-full shadow-md bg-white" />
-<h1>aosidj</h1>
     <!-- Main Content -->
     <div class="flex-grow max-w-5xl mx-auto py-12 px-4 md:px-8">
       <!-- Title -->
@@ -36,6 +35,18 @@
           <!-- Image -->
           <div v-if="item.image_url" class="mb-4 overflow-hidden rounded-lg">
             <img :src="item.image_url" alt="Lost Item" class="w-full object-cover rounded-lg shadow-sm" />
+          </div>
+
+          <div class="flex justify-end mb-4">
+            <button 
+              @click="handleClaim(item)"
+              class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Claim Item</span>
+            </button>
           </div>
 
           <!-- Comments Section -->
@@ -79,6 +90,7 @@ import axios from "axios";
 import HeaderBar from "@/Components/HeaderBar.vue";
 import FooterBar from "@/Components/FooterBar.vue";
 import CommentModal from "@/Components/CommentModal.vue";
+import { router } from '@inertiajs/vue3';
 
 export default {
   name: "NewsFeed",
@@ -289,6 +301,10 @@ export default {
       }
     };
 
+    const handleClaim = (item) => {
+      router.visit(`/claims?item_id=${item.id}&item_type=${item.isFound ? 'found' : 'lost'}`);
+    };
+
     // Format date helper function
     const formatDate = (date) => {
       return new Date(date).toLocaleDateString('en-US', {
@@ -308,8 +324,8 @@ export default {
     return {
       lostItems,
       loading,
-      newComments,
       activeCommentModal,
+      handleClaim,
       submitComment,
       formatDate
     };

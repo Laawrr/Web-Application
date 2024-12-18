@@ -9,9 +9,7 @@
 
                 <div class="flex items-center space-x-6">
                     <Link href="/" class="text-gray-600 hover:text-teal-500">Home</Link>
-                    <Link href="/newsfeed" class="text-gray-600 hover:text-teal-500"><strong>Feed</strong> </Link>
-
-                    <Link :href="route('dashboard')" class="text-gray-600 hover:text-teal-500">Dashboard</Link>
+                    <Link href="/newsfeed" class="text-gray-600 hover:text-teal-500"><strong>Feed</strong></Link>
 
                     <!-- Import Notification Component -->
                     <div class="relative z-50">

@@ -74,6 +74,9 @@ Route::middleware([CheckRole::class . ':admin'])->group(function () {
     Route::post('/admin/users', [AdminController::class, 'store']);
     Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
     Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
+
+    // Claims routes
+    Route::patch('/admin/claims/{claim}/status', [ClaimController::class, 'updateStatus'])->name('admin.claims.update-status');
 });
 
 // Lost Items routes
