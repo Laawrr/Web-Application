@@ -6,7 +6,7 @@
         <section class="dashboard-header">
           <div class="search-bar">
             <input type="text" v-model="searchQuery" placeholder="Search for lost items..." @input="filterPosts" />
-            <div v-if="isLoading" class="loading-spinner">
+            <div v-if="isLoading" class="loading-spinner flex items-center">
             <div class="animate-spin rounded-full ms-5 border-t-4 border-blue-500 w-8 h-8"></div>
             <p class="ms-3">Loading...</p>
           </div>
@@ -891,41 +891,133 @@ export default {
   background-color: #004d4d;
 }
 
+/* === Featured Posts Section === */
 .featured-posts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-bottom: 40px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* Flexible layout */
+  gap: 25px;
+  padding: 20px 10px;
+  margin-bottom: 50px;
 }
 
+/* === Card Styles === */
 .card {
-  background: white;
-  border-radius: 10px;
-  /* Increased border radius for rounded corners */
-  padding: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  /* Slightly larger shadow for better depth */
+  background: linear-gradient(135deg, #f8f8f8, #e0e0e0); /* Subtle gradient background */
+  border-radius: 20px; /* Rounded corners for smoothness */
+  padding: 30px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05); /* Elegant deep shadow */
   position: relative;
-  margin-bottom: 20px;
-  transition: all 0.3s ease-in-out;
-  color: #008080;
+  color: #333; /* Dark gray text for readability */
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out; /* Smooth transition for hover effects */
+  color:#008080;
 }
 
+/* === Hover Effect - Card Elevation === */
 .card:hover {
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-  /* Hover effect: increase shadow */
-  transform: translateY(-5px);
-  /* Slight lift on hover */
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1); /* Deeper shadow */
+  transform: translateY(-12px); /* Lift effect */
+  transition: all 0.4s ease-in-out;
 }
 
+/* === Card Image Styling === */
 .card-image {
   width: 100%;
-  height: 200px;
+  height: 250px; /* Larger image height */
   object-fit: cover;
-  border-radius: 4px;
-  margin-bottom: 10px;
+  border-radius: 15px; /* Rounded corners for images */
+  margin-bottom: 20px;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* === Hover Effect on Image */
+.card-image:hover {
+  transform: scale(1.1); /* Smooth zoom-in effect */
+}
+
+/* === Card Title Styling === */
+.card-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #2c3e50; /* Dark gray title */
+  margin-bottom: 15px;
+  letter-spacing: 0.5px;
+  text-transform: capitalize;
+}
+
+/* === Card Description Styling === */
+.card-text {
+  font-size: 1rem;
+  color: #555; /* Lighter text color for description */
+  line-height: 1.6;
+  margin-bottom: 25px;
+  transition: color 0.3s ease; /* Smooth color transition */
+}
+
+/* === Card Hover Effect on Description === */
+.card:hover .card-text {
+  color: #2c3e50; /* Darker color on hover */
+}
+
+/* === Call to Action Button Styling === */
+.card-button {
+  background-color: #3498db; /* Blue button color */
+  color: #fff; /* White text */
+  padding: 12px 25px;
+  border-radius: 25px; /* Rounded button */
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  text-align: center;
+  border: none;
+  transition: background-color 0.3s ease, transform 0.3s ease; /* Smooth button transition */
+  display: inline-block;
+  margin-top: 20px;
   cursor: pointer;
 }
+
+.card-button:hover {
+  background-color: #2980b9; /* Darker blue button on hover */
+  transform: scale(1.05); /* Slight scaling effect */
+}
+
+/* === Hover Effect - Card Button Glow === */
+.card-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(52, 152, 219, 0.1); /* Subtle blue glow effect */
+  z-index: -1;
+  border-radius: 25px;
+  transition: all 0.3s ease-in-out;
+}
+
+.card-button:hover::before {
+  opacity: 1; /* Show the glow effect on hover */
+}
+
+/* === Card Hover Effects - Animation === */
+.card:hover .card-image {
+  transform: scale(1.1);
+  transition: all 0.3s ease-in-out;
+}
+
+/* === Card Bottom Shadow for Depth === */
+.card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.1); /* Soft shadow at the bottom for depth */
+  border-radius: 0 0 20px 20px;
+}
+
 
 .modal-overlay {
   position: fixed;
