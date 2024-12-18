@@ -42,44 +42,72 @@
             <!-- Edit Button -->
             <button @click="openEditModal" class="post-modal__edit-btn">Edit</button>
 
-            <!-- Close Button -->
-            <button @click="closePostModal" class="post-modal__close-btn">Close</button>
+          n>
           </div>
         </div>
 
-        <!-- Edit Modal -->
-        <div v-if="showEditModal" class="edit-modal__overlay" @click="closeEditModal">
-          <div class="edit-modal__content" @click.stop>
-            <h2 class="edit-modal__title">Edit Item</h2>
+       <!-- Edit Modal -->
+       <div v-if="showEditModal" class="edit-modal__overlay" @click="closeEditModal">
+  <div class="edit-modal__content" @click.stop>
+    <h2 class="edit-modal__title">Edit Item</h2>
 
-            <form @submit.prevent="submitEditForm">
-              <div class="form-group">
-                <label for="editItemName">Item Name</label>
-                <input type="text" id="editItemName" v-model="currentPost.item_name" required />
-              </div>
-              <div class="form-group">
-                <label for="editDescription">Description</label>
-                <textarea id="editDescription" v-model="currentPost.description" required></textarea>
-              </div>
-              <div class="form-group">
-                <label for="editFacebook">Facebook</label>
-                <input type="text" id="editFacebook" v-model="currentPost.facebook_link" required />
-              </div>
-              <div class="form-group">
-                <label for="editContact">Contact</label>
-                <input type="text" id="editContact" v-model="currentPost.contact_number" required />
-              </div>
+    <form @submit.prevent="submitEditForm">
+      <div class="form-group">
+        <label for="editItemName">Item Name</label>
+        <input type="text" id="editItemName" v-model="currentPost.item_name" required />
+      </div>
 
-              <div class="form-actions">
-                <button type="submit" class="submit-btn">Save Changes</button>
-                <button type="button" @click="closeEditModal" class="cancel-btn">Cancel</button>
-              </div>
-            </form>
+      <!-- Category Dropdown -->
+      <div class="form-group">
+        <label for="editCategory">Category</label>
+        <select id="editCategory" v-model="currentPost.category" required>
+          <option value="Electronics">Electronics</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Wallets">Wallets</option>
+          <option value="Bags">Bags</option>
+          <option value="Jewelry">Jewelry</option>
+          <option value="Cards">Cards</option>
+          <option value="Books">Books</option>
+          <option value="Accessories">Accessories</option>
+        </select>
+      </div>
 
-            <!-- Close Button for Edit Modal -->
-            <button @click="closeEditModal" class="edit-modal__close-btn">Close</button>
-          </div>
-        </div>
+      <div class="form-group">
+        <label for="editDescription">Description</label>
+        <textarea id="editDescription" v-model="currentPost.description" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="editFacebook">Facebook</label>
+        <input type="text" id="editFacebook" v-model="currentPost.facebook_link" required />
+      </div>
+
+      <div class="form-group">
+        <label for="editContact">Contact</label>
+        <input type="text" id="editContact" v-model="currentPost.contact_number" required />
+      </div>
+
+      <!-- Image Upload Section -->
+      <div class="form-group">
+        <label for="editImage">Upload New Image</label>
+        <input type="file" id="editImage" @change="handleImageUpload" accept="image/*" />
+      </div>
+
+      <!-- Image Preview Section (optional) -->
+      <div v-if="imagePreviewUrl" class="form-group">
+        <label>Preview Image</label>
+        <img :src="imagePreviewUrl" alt="Image Preview" class="image-preview" />
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="submit-btn">Save Changes</button>
+        <button type="button" @click="closeEditModal" class="cancel-btn">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
 
         <!-- Upload Form Modal (unchanged) -->
         <div v-if="showUploadForm" class="modal-overlay">
@@ -506,8 +534,13 @@ export default {
       // Handle the form submission logic for editing a post
       this.showEditModal = false;
       this.showSuccess("Post updated successfully!");
+    },
+
+    // Display success message (you can customize this)
+    showSuccess(message) {
+      alert(message); // Simple alert for now, or use a custom notification system
     }
-  },
+  } 
 };
 </script>
 
@@ -593,19 +626,112 @@ export default {
   /* Ensures the image stays within bounds */
 }
 
-/* ======== Close Button ======== */
-.post-modal__close-btn {
+/* Edit Modal Styles */
+.edit-modal__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001; /* Ensure the Edit Modal is above other elements */
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.edit-modal__content {
+  position: relative;
+  max-width: 800px; /* or any width you prefer */
+  margin: 0 auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;  /* Enables vertical scrolling */
+  max-height: 100vh;  /* Limit the height to 80% of the viewport height */
+}
+
+.edit-modal__title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.form-group textarea {
+  height: 150px;
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.submit-btn,
+.cancel-btn {
+  padding: 12px 20px;
+  font-size: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.submit-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+}
+
+.submit-btn:hover {
+  background-color: #45a049;
+}
+
+.cancel-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+}
+
+.cancel-btn:hover {
+  background-color: #e53935;
+}
+
+.edit-modal__close-btn {
   position: absolute;
   top: 20px;
   right: 20px;
   background: #ff4b5c;
-  color: #fff;
+  color: white;
   border: none;
   border-radius: 50%;
   width: 40px;
   height: 40px;
-  font-size: 1.2rem;
-  font-weight: bold;
+  font-size: 1.5rem;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -613,14 +739,66 @@ export default {
   transition: all 0.3s ease;
 }
 
-.post-modal__close-btn:hover {
+.edit-modal__close-btn:hover {
   background: #ff2c3c;
-  transform: rotate(90deg);
 }
 
-.post-modal__close-btn:active {
+.edit-modal__close-btn:active {
   transform: scale(0.95);
 }
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ======== Close Button ======== */
+.post-modal__close-btn {
+  position: absolute;
+  top: 15px; /* Keeps it close to the top */
+  right: 15px; /* Keeps it close to the right edge */
+  background: #ff6f61; /* A softer shade of red */
+  color: #fff;
+  border: none;
+  border-radius: 8px; /* Rounded corners for a modern look */
+  padding: 10px 20px; /* Adjusted padding for a rectangular shape */
+  font-size: 1rem; /* Adjusted font size */
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+}
+
+.post-modal__close-btn:hover {
+  background: #ff4b5c; /* Darker red on hover */
+  transform: translateY(-2px); /* Slight upward movement on hover */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
+}
+
+.post-modal__close-btn:focus {
+  outline: none; /* Removes the default focus outline */
+  border: 2px solid #ff4b5c; /* Adds a subtle border on focus */
+}
+
 
 /* ======== Animations ======== */
 @keyframes fadeIn {
@@ -1090,7 +1268,7 @@ export default {
   color: #fff;
   border: none;
   border-radius: 50%;
-  width: 40px;
+  width: 50px;
   height: 40px;
   font-size: 1.2rem;
   font-weight: bold;
@@ -1103,7 +1281,6 @@ export default {
 
 .edit-modal__close-btn:hover {
   background: #ff2c3c;
-  transform: rotate(90deg);
 }
 
 .edit-modal__close-btn:active {
@@ -1113,29 +1290,31 @@ export default {
 /* ======== Edit Button in the Item Modal ======== */
 .post-modal__edit-btn {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  background: #008080;
+  bottom: 20px; /* Positioned at the bottom */
+  left: 50%; /* Center the button horizontally */
+  transform: translateX(-50%); /* Ensure exact horizontal centering */
+  background: #008080; /* Teal color */
   color: #fff;
   border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  font-size: 1.2rem;
+  border-radius: 8px; /* Rounded corners for a modern look */
+  padding: 12px 30px; /* Padding for a rectangular shape */
+  font-size: 1rem; /* Adjust font size for clarity */
   font-weight: bold;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
 }
 
 .post-modal__edit-btn:hover {
-  background: #45a049;
+  background: #45a049; /* Slightly darker green on hover */
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
 }
 
 .post-modal__edit-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.95); /* Slight shrinking effect when clicked */
 }
 
 /* Styling for input fields and form */
