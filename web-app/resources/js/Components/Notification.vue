@@ -96,26 +96,51 @@ const toggleDropdown = () => {
 };
 
 const openNotificationDetails = async (notification) => {
+  console.log('Opening notification:', {
+    notification_id: notification.id,
+    item_id: notification.data.item_id,
+    item_type: notification.data.item_type,
+    notification_data: notification.data
+  });
+  
   try {
-    console.log('Opening notification details:', notification);
+    // Fetch item details
+    const itemUrl = notification.data.item_type === 'found' ? window.foundItemsUrl : window.lostItemsUrl;
+    const response = await axios.get(`${itemUrl}/${notification.data.item_id}`);
+    console.log('Fetched item details:', response.data);
     
-    // Get the item details
-    const itemType = notification.data.item_type;
-    const itemId = notification.data.item_id;
-    const response = await axios.get(`/${itemType}-items/${itemId}`);
-    
-    // Get user name
-    const userName = notification.data.commenter_name || 'Unknown User';
-
-    // Set up the selected item with comments
-    selectedItem.value = {
-      ...response.data,
-      id: notification.data.item_id,
-      isFound: notification.data.item_type === 'found',
-      userName: userName,
-      item_name: notification.data.item_name,
-      comments: notification.comments || []
-    };
+    // Fetch comments for this item
+    try {
+      const commentsResponse = await axios.get(`/comments/${notification.data.item_type}/${notification.data.item_id}`);
+      console.log('Fetched comments:', commentsResponse.data);
+      
+      // Format comments with user names
+      const comments = (commentsResponse.data.comments || commentsResponse.data || []).map(comment => ({
+        ...comment,
+        userName: comment.user?.name || comment.userName || 'Unknown User',
+        created_at: formatDate(comment.created_at)
+      }));
+      
+      // Set the item data with comments
+      selectedItem.value = {
+        ...response.data,
+        id: notification.data.item_id,
+        isFound: notification.data.item_type === 'found',
+        userName: response.data.user?.name || notification.data.commenter_name || 'Unknown User',
+        item_name: notification.data.item_name,
+        comments: comments
+      };
+    } catch (commentsError) {
+      console.error('Error fetching comments:', commentsError);
+      selectedItem.value = {
+        ...response.data,
+        id: notification.data.item_id,
+        isFound: notification.data.item_type === 'found',
+        userName: response.data.user?.name || notification.data.commenter_name || 'Unknown User',
+        item_name: notification.data.item_name,
+        comments: []
+      };
+    }
     
     // Show the modal
     showCommentModal.value = true;
@@ -133,7 +158,7 @@ const submitComment = async () => {
     const commentData = {
       item_id: selectedItem.value.id,
       item_type: selectedItem.value.isFound ? 'found' : 'lost',
-      text: newComment.value.trim()
+      comment: newComment.value.trim()
     };
     
     console.log('Submitting comment:', commentData);
@@ -141,28 +166,14 @@ const submitComment = async () => {
     console.log('Comment submitted:', response.data);
     
     // Add the new comment to the list
-    if (response.data.success && response.data.comment) {
-      const newCommentObj = {
-        ...response.data.comment,
-        userName: response.data.comment.user?.name || 'Unknown User',
-        text: newComment.value.trim(),
-        created_at: new Date().toISOString()
-      };
-      
-      if (!selectedItem.value.comments) {
-        selectedItem.value.comments = [];
-      }
-      selectedItem.value.comments.push(newCommentObj);
-      
-      // Clear the input
-      newComment.value = '';
-      
-      // Refresh comments to ensure consistency
-      const commentsResponse = await axios.get(`/comments/${selectedItem.value.isFound ? 'found' : 'lost'}/${selectedItem.value.id}`);
-      if (commentsResponse.data.comments) {
-        selectedItem.value.comments = commentsResponse.data.comments.data || [];
-      }
-    }
+    const newCommentObj = {
+      ...response.data,
+      userName: response.data.user?.name || 'Unknown User',
+      created_at: formatDate(response.data.created_at)
+    };
+    
+    selectedItem.value.comments.push(newCommentObj);
+    newComment.value = ''; // Clear the input
   } catch (error) {
     console.error('Error submitting comment:', error);
   }
@@ -284,37 +295,30 @@ const fetchComments = async () => {
       try {
         const itemType = notification.data.item_type;
         const itemId = notification.data.item_id;
-        
-        console.log(`Fetching comments for ${itemType} item ${itemId}`);
         const response = await axios.get(`/comments/${itemType}/${itemId}`);
-        console.log(`Comments response for item ${itemId}:`, response.data);
+        console.log(`Comments for item ${itemId}:`, response.data);
 
-        if (response.data.success && Array.isArray(response.data.comments)) {
-          // Map comments to include userName
-          const formattedComments = response.data.comments.map(comment => ({
-            id: comment.id,
-            text: comment.text,
-            userName: comment.user?.name || 'Unknown User',
-            created_at: formatDate(comment.created_at),
-            user_id: comment.user?.id
-          }));
+        // Handle different response formats
+        const comments = response.data.comments || response.data || [];
+        
+        // Ensure each comment has a userName
+        notification.comments = comments.map(comment => ({
+          ...comment,
+          userName: comment.user?.name || comment.userName || 'Unknown User'
+        }));
 
-          // Sort comments by date, newest first
-          formattedComments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-          // Store comments in the notification object
-          notification.comments = formattedComments;
-        } else {
-          console.warn(`Invalid comments response format for ${itemType} item ${itemId}:`, response.data);
-          notification.comments = [];
+        // Update the notification's comment text if it exists in the comments
+        const relatedComment = comments.find(c => c.id === notification.data.comment_id);
+        if (relatedComment) {
+          notification.data.comment_text = relatedComment.text;
         }
       } catch (error) {
-        console.error(`Error fetching comments for notification ${notification.id}:`, error);
+        console.error(`Error fetching comments for notification item ${notification.data.item_id}:`, error.message);
         notification.comments = [];
       }
     }
   } catch (error) {
-    console.error('Error in fetchComments:', error);
+    console.error("Error in fetchComments:", error.message);
   }
 };
 

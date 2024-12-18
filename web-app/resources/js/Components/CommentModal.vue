@@ -122,7 +122,15 @@ export default {
     },
     item: {
       type: Object,
-      required: true
+      required: true,
+      default: () => ({
+        isFound: false,
+        userName: '',
+        item_name: '',
+        description: '',
+        image_url: '',
+        created_at: new Date().toISOString()
+      })
     },
     itemId: {
       type: [Number, String],

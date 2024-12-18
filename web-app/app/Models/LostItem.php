@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Notification;
+use App\Models\Comment;
 
 class LostItem extends Model
 {
@@ -27,6 +28,11 @@ class LostItem extends Model
         return $this->hasOne(Claim::class, 'lost_item_id');
     }
     
+    /**
+     * Get all of the comments for the LostItem
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
+     */
     public function comments()
     {
         return $this->morphMany(Comment::class, 'commentable');

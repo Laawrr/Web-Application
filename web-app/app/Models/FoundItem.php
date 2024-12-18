@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Notification;
+use App\Models\Comment;
 
 class FoundItem extends Model
 {
@@ -13,7 +14,7 @@ class FoundItem extends Model
     protected $table = 'found_items';
 
     protected $fillable = [
-        'item_name','found_date', 'facebook_link', 'contact_number', 
+        'item_name', 'found_date', 'facebook_link', 'contact_number', 
         'description', 'category', 'location', 'image_url', 'user_id'
     ];
 
@@ -21,11 +22,17 @@ class FoundItem extends Model
     {
         return $this->belongsTo(User::class);
     }
+
     public function claim()
     {
         return $this->hasOne(Claim::class, 'found_item_id');
     }
 
+    /**
+     * Get all of the comments for the FoundItem
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
+     */
     public function comments()
     {
         return $this->morphMany(Comment::class, 'commentable');
@@ -40,5 +47,4 @@ class FoundItem extends Model
             'user_id' => $this->user_id,
         ]);
     }
-
 }
