@@ -370,9 +370,11 @@ export default {
 
     // Add the correct date based on the status
     if (this.newItem.status === "Lost") {
+      this.isFound == false;
       formFields.lost_date = this.newItem.lost_date;
       console.log("Lost date added:", formFields.lost_date);
     } else {
+      this.isFound == true
       formFields.found_date = this.newItem.found_date;
       console.log("Found date added:", formFields.found_date);
     }
