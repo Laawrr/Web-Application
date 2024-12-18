@@ -1067,7 +1067,7 @@ export default {
   color: #fff;
   border: none;
   border-radius: 50%;
-  width: 40px;
+  width: 50px;
   height: 40px;
   font-size: 1.2rem;
   font-weight: bold;
@@ -1080,7 +1080,6 @@ export default {
 
 .edit-modal__close-btn:hover {
   background: #ff2c3c;
-  transform: rotate(90deg);
 }
 
 .edit-modal__close-btn:active {

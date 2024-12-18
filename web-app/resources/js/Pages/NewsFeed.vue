@@ -6,7 +6,7 @@
     <!-- Main Content -->
     <div class="flex-grow max-w-5xl mx-auto py-12 px-4 md:px-8">
       <!-- Title -->
-      <h1 class="text-4xl font-semibold text-center text-blue-900 mb-8">Lost Items News Feed</h1>
+      <h1 class="text-4xl font-semibold text-center text-blue-900 mb-8">  News Feed</h1>
 
       <!-- Loading State -->
       <div v-if="loading" class="flex justify-center items-center space-x-2 text-xl text-gray-600">
