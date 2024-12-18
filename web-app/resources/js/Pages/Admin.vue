@@ -38,49 +38,118 @@
             <v-icon class="mr-2" color="accent">mdi-flag</v-icon>
             <v-list-item-title>Reported Items</v-list-item-title>
           </v-list-item>
+          <v-list-item @click="currentView = 'claims'">
+            <v-icon class="mr-2" color="accent">mdi-flag</v-icon>
+            <v-list-item-title>Claims</v-list-item-title>
+          </v-list-item>
         </v-list-item-group>
       </v-list>
     </v-navigation-drawer>
 
     <!-- Main Content -->
     <v-main class="bg-light-gray" style="margin-top: 50px;">
-      <Dashboard v-if="currentView === 'dashboard'" />
-      <UsersView v-else-if="currentView === 'users'" />
-      <UsersLog v-else-if="currentView === 'usersLog'" />
-      <ReportedItems v-else-if="currentView === 'reportedItems'" />
+      <v-container fluid>
+        <!-- Different views based on navigation -->
+        <div v-if="currentView === 'dashboard'">
+          <Dashboard />
+        </div>
+
+        <div v-else-if="currentView === 'users'">
+          <UsersView />
+        </div>
+
+        <div v-else-if="currentView === 'usersLog'">
+          <UsersLog />
+        </div>
+
+        <div v-else-if="currentView === 'reportedItems'">
+          <ReportedItems />
+        </div>
+
+        <div v-else-if="currentView === 'claims'" class="space-y-4">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-semibold">Claims Management</h2>
+            <div class="flex space-x-2">
+              <v-btn
+                v-for="filter in ['All', 'Pending', 'Approved', 'Rejected']"
+                :key="filter"
+                :color="currentFilter === filter.toLowerCase() ? 'primary' : ''"
+                @click="currentFilter = filter.toLowerCase()"
+                small
+                outlined
+              >
+                {{ filter }}
+              </v-btn>
+            </div>
+          </div>
+
+          <!-- Claims List -->
+          <div class="grid gap-4">
+            <ClaimedItem
+              v-for="claim in filteredClaims"
+              :key="claim.id"
+              :item="claim.item"
+              :status="claim.status"
+              :proofImage="claim.proof_image"
+              :claimId="claim.id"
+              @status-updated="handleStatusUpdate"
+            />
+          </div>
+        </div>
+      </v-container>
     </v-main>
   </v-app>
 </template>
 
-<script>
+<script setup>
+import { ref, computed } from 'vue';
 import Dashboard from '@/Components/Dashboard.vue';
 import UsersView from '@/Components/UsersView.vue';
 import UsersLog from '@/Components/UsersLog.vue';
 import ReportedItems from '@/Components/ReportedItems.vue';
-import { ref } from 'vue';
+import ClaimedItem from '@/Components/ClaimedItem.vue';
 import { Link, router } from '@inertiajs/vue3';
 
 const handleSignOut = () => {
-    router.post(route('logout'), {}, {
-        onSuccess: () => {
-            router.visit('/');
-        }
-    });
+  router.post(route('logout'), {}, {
+    onSuccess: () => {
+      router.visit('/');
+    }
+  });
 };
 
-export default {
-  name: "AdminDashboard",
-  components: {
-    Dashboard,
-    UsersView,
-    UsersLog,
-    ReportedItems,
+const currentView = ref('dashboard');
+const currentFilter = ref('all');
+const claims = ref([
+  // Sample data - replace with actual API call
+  {
+    id: 1,
+    item: {
+      name: 'Lost Phone',
+      description: 'iPhone 12 Pro Max',
+      location: 'Library',
+      created_at: '2023-12-19',
+      image_url: '/img/sample-item.jpg'
+    },
+    status: 'pending',
+    proof_image: '/img/sample-proof.jpg'
   },
-  data() {
-    return {
-      currentView: 'dashboard',
-    };
-  },
+  // Add more sample claims as needed
+]);
+
+const filteredClaims = computed(() => {
+  if (currentFilter.value === 'all') {
+    return claims.value;
+  }
+  return claims.value.filter(claim => claim.status === currentFilter.value);
+});
+
+// Handle claim status updates
+const handleStatusUpdate = ({ id, status }) => {
+  const claimIndex = claims.value.findIndex(claim => claim.id === id);
+  if (claimIndex !== -1) {
+    claims.value[claimIndex].status = status;
+  }
 };
 </script>
 
