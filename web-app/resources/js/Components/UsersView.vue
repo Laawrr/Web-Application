@@ -86,10 +86,17 @@
             <v-container>
               <v-row>
                 <v-col cols="12">
-                  <v-text-field label="Name" v-model="newUser.name"></v-text-field>
+                  <v-text-field label="Name" v-model="newUser.name" required></v-text-field>
                 </v-col>
                 <v-col cols="12">
-                  <v-text-field label="Email" v-model="newUser.email"></v-text-field>
+                  <v-text-field label="Email" v-model="newUser.email" required></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-field label="Password" v-model="newUser.password" type="password" required></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-select label="Role" v-model="newUser.role" :items="roles" item-text="name" item-value="value"
+                    required></v-select>
                 </v-col>
               </v-row>
             </v-container>
@@ -105,6 +112,7 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
+
 
       <!-- Edit User Dialog -->
       <v-dialog v-model="showEditDialog" max-width="500px">
@@ -184,6 +192,10 @@ export default {
           sortable: false,
         },
       ],
+      roles: [
+        { name: 'Admin', value: 'admin' },
+        { name: 'User', value: 'user' },
+      ],
       users: [],
       page: 1,
       loading: true,
@@ -244,8 +256,35 @@ export default {
 
 
     addUser() {
-      console.log('Add user:', this.newUser);
-      this.showAddDialog = false;
+      // Validate form inputs
+      if (!this.newUser.name || !this.newUser.email || !this.newUser.role || !this.newUser.password) {
+        alert('Please fill in all the fields, including the password.');
+        return;
+      }
+
+      // Send data to the backend using Axios
+      axios.post('/admin/users', this.newUser)
+        .then(response => {
+          // Add the newly created user to the beginning of the users list
+          this.users.unshift(response.data);
+
+          // Hide the dialog
+          this.showAddDialog = false;
+
+          // Reset the newUser object
+          this.newUser = { name: '', email: '', role: '', password: '' };
+
+          // Display a success message
+          alert('User added successfully!');
+        })
+        .catch(error => {
+          // Log the error
+          console.error('Error adding user:', error);
+
+          // Extract and display validation or server errors (if available)
+          const errorMessage = error.response?.data?.message || 'Failed to add user. Please try again.';
+          alert(errorMessage);
+        });
     },
 
     editUser(user) {
