@@ -160,7 +160,7 @@
                             <i class="fas fa-map-marker-alt"></i> Add Location (Click to Enable Map)
                           </button>
                         </div>
-                        <div v-if="locationSelected" class="location-status" style="margin-bottom: 320px" >
+                        <div v-if="locationSelected" class="location-status" style="margin-bottom: 320px">
                           <span v-if="newItem.location">Location selected ✓</span>
                           <span v-else>Click on the map to place a pin</span>
                         </div>
@@ -204,6 +204,7 @@ export default {
   data() {
     return {
       isLoading: false,
+      isFound: false,
       newItem: {
         item_name: "",
         status: "",
@@ -260,9 +261,9 @@ export default {
     async fetchPosts() {
       this.isLoading = true;
       try {
-        const [lostResponse, foundResponse] = await Promise.all([ 
-          axios.get(window.lostItemsUrl), 
-          axios.get(window.foundItemsUrl) 
+        const [lostResponse, foundResponse] = await Promise.all([
+          axios.get(window.lostItemsUrl),
+          axios.get(window.foundItemsUrl)
         ]);
 
         const processItems = (items, isFound) => {
@@ -287,11 +288,11 @@ export default {
       const query = this.searchQuery.toLowerCase();
       this.filteredPosts = query
         ? this.posts.filter(
-            (post) =>
-              post.item_name.toLowerCase().includes(query) ||
-              post.description.toLowerCase().includes(query) ||
-              post.category.toLowerCase().includes(query)
-          )
+          (post) =>
+            post.item_name.toLowerCase().includes(query) ||
+            post.description.toLowerCase().includes(query) ||
+            post.category.toLowerCase().includes(query)
+        )
         : [...this.posts];
     },
     handleFileUpload(event) {
@@ -325,84 +326,114 @@ export default {
       this.newItem.location = location;
       this.locationSelected = true;
     },
-    async submitForm() {
-      if (!this.newItem.location) {
-        this.showError("Please select a location on the map first");
-        return;
+  async submitForm() {
+  console.log("Form submission started");
+
+  // Check if a location is selected
+  if (!this.newItem.location) {
+    this.showError("Please select a location on the map first");
+    console.log("Location not selected");
+    return;
+  }
+
+  this.isSubmitting = true;
+  console.log("Submitting form data...");
+
+  try {
+    // Create a FormData object to handle form data
+    const formData = new FormData();
+    console.log("FormData object created");
+
+    // Append image file if exists
+    if (this.newItem.image_file) {
+      formData.append("image_url", this.newItem.image_file);
+      console.log("Image file added to FormData");
+    }
+
+    // Prepare other form fields
+    const formFields = {
+      item_name: this.newItem.item_name,
+      status: this.newItem.status,
+      category: this.newItem.category,
+      description: this.newItem.description,
+      facebook_link: this.newItem.facebook_link,
+      contact_number: this.newItem.contact_number,
+      user_id: this.newItem.user_id,
+      latitude: this.newItem.location.lat,
+      longitude: this.newItem.location.lng,
+    };
+    console.log("Form fields prepared:", formFields);
+
+    // Add location as a string
+    formFields.location = `${this.newItem.location.lat},${this.newItem.location.lng}`;
+    console.log("Location added:", formFields.location);
+
+    // Add the correct date based on the status
+    if (this.newItem.status === "Lost") {
+      formFields.lost_date = this.newItem.lost_date;
+      console.log("Lost date added:", formFields.lost_date);
+    } else {
+      formFields.found_date = this.newItem.found_date;
+      console.log("Found date added:", formFields.found_date);
+    }
+
+    // Append all form fields to the FormData
+    Object.keys(formFields).forEach((key) => {
+      if (formFields[key] !== null && formFields[key] !== undefined) {
+        formData.append(key, formFields[key]);
+        console.log(`Form field added: ${key} = ${formFields[key]}`);
       }
+    });
 
-      this.isSubmitting = true;
-      try {
-        const formData = new FormData();
+    // Get CSRF token for the request
+    const token = document.head.querySelector('meta[name="csrf-token"]');
+    if (!token) {
+      this.showError("CSRF token not found. Please refresh the page.");
+      console.log("CSRF token not found");
+      return;
+    }
 
-        if (this.newItem.image_file) {
-          formData.append("image_url", this.newItem.image_file);
-        }
+    formData.append("_token", token.content);
+    console.log("CSRF token added:", token.content);
 
-        const formFields = {
-          item_name: this.newItem.item_name,
-          status: this.newItem.status,
-          category: this.newItem.category,
-          description: this.newItem.description,
-          facebook_link: this.newItem.facebook_link,
-          contact_number: this.newItem.contact_number,
-          user_id: this.newItem.user_id,
-          latitude: this.newItem.location.lat,
-          longitude: this.newItem.location.lng,
-        };
+    // Determine the correct URL based on item status
+    const url = this.isFound ? window.foundItemsStore : window.lostItemsStore;
+    console.log("Post URL determined:", url);
 
-        formFields.location = `${this.newItem.location.lat},${this.newItem.location.lng}`;
+    // Make the API request
+    console.log("Sending POST request...");
+    const response = await axios.post(url, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        "X-CSRF-TOKEN": token.content,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      withCredentials: true,
+    });
 
-        if (this.newItem.status === "Lost") {
-          formFields.lost_date = this.newItem.lost_date;
-        } else {
-          formFields.found_date = this.newItem.found_date;
-        }
+    console.log("Form submitted successfully:", response);
+    // Show success message and refresh the posts
+    this.showSuccess("Post created successfully!");
+    this.closeUploadForm();
+    await this.fetchPosts();
+  } catch (error) {
+    console.error("Error occurred during form submission:", error);
 
-        Object.keys(formFields).forEach((key) => {
-          if (formFields[key] !== null && formFields[key] !== undefined) {
-            formData.append(key, formFields[key]);
-          }
-        });
-
-        const token = document.head.querySelector('meta[name="csrf-token"]');
-
-        if (!token) {
-          this.showError("CSRF token not found. Please refresh the page.");
-          return;
-        }
-
-        formData.append("_token", token.content);
-
-        const url =
-          this.newItem.status === "Lost" ? window.lostItemsStore : window.foundItemsStore;
-
-        const response = await axios.post(url, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "X-CSRF-TOKEN": token.content,
-            "X-Requested-With": "XMLHttpRequest",
-          },
-          withCredentials: true,
-        });
-
-        this.showSuccess("Post created successfully!");
-        this.closeUploadForm();
-        await this.fetchPosts();
-      } catch (error) {
-        if (error.response && error.response.status === 422) {
-          const validationErrors = error.response.data.errors;
-          const errorMessages = Object.values(validationErrors)
-            .flat()
-            .join("\n");
-          this.showError("Validation failed:\n" + errorMessages);
-        } else {
-          this.showError("Error creating post: " + error.message);
-        }
-      } finally {
-        this.isSubmitting = false;
-      }
-    },
+    if (error.response && error.response.status === 422) {
+      const validationErrors = error.response.data.errors;
+      const errorMessages = Object.values(validationErrors)
+        .flat()
+        .join("\n");
+      this.showError("Validation failed:\n" + errorMessages);
+      console.log("Validation errors:", errorMessages);
+    } else {
+      this.showError("Error creating post: " + error.message);
+    }
+  } finally {
+    this.isSubmitting = false;
+    console.log("Form submission completed");
+  }
+},
     showError(message) {
       const errorLines = message.split("\n");
       const formattedMessage = errorLines.join("\n• ");
