@@ -223,11 +223,17 @@ export default {
         
         if (!text.trim()) return;
 
-        const response = await axios.post("/comments", {
-          item_id: itemId,
-          text: text,
-          user_id: currentUserId.value,
-          item_type: itemType
+        const formData = new FormData();
+        formData.append('item_id', itemId);
+        formData.append('text', text);
+        formData.append('user_id', currentUserId.value);
+        formData.append('item_type', itemType);
+
+        const response = await axios.post("/comments", formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+          }
         });
 
         // Find the item and add the new comment
@@ -244,14 +250,24 @@ export default {
             userName: userName.value,
             created_at: new Date().toISOString(),
             user: {
-              name: userName.value
+              name: userName.value,
+              id: currentUserId.value
             }
           };
           
-          item.comments.push(newComment);
+          item.comments.unshift(newComment);
         }
+
+        return response.data;
       } catch (error) {
         console.error("Error submitting comment:", error.message);
+        if (error.response?.status === 500) {
+          throw new Error("Server error. Please try again later.");
+        } else if (error.response?.data?.message) {
+          throw new Error(error.response.data.message);
+        } else {
+          throw new Error("Failed to submit comment. Please try again.");
+        }
       }
     };
 

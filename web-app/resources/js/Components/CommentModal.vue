@@ -154,14 +154,18 @@ export default {
       });
     };
 
-    const submitComment = () => {
+    const submitComment = async () => {
       if (newComment.value.trim()) {
-        emit('submit-comment', {
-          itemId: props.itemId,
-          text: newComment.value,
-          itemType: props.itemType
-        });
-        newComment.value = '';
+        try {
+          await emit('submit-comment', {
+            itemId: props.itemId,
+            text: newComment.value,
+            itemType: props.itemType
+          });
+          newComment.value = '';
+        } catch (error) {
+          alert(error.message);
+        }
       }
     };
 

@@ -11,9 +11,15 @@
 
         <!-- Featured Posts -->
         <section class="featured-posts">
-          <div v-if="filteredPosts.length === 0" class="no-posts">
-            <p>No posts found.</p>
-          </div>
+            <!-- Add loading spinner -->
+        <div v-if="isLoading" class="loading-spinner">
+          <div class="spinner-border"></div>
+          <p>Loading posts...</p>
+        </div>
+        <div v-else-if="filteredPosts.length === 0" class="no-posts">
+          <p>No posts found.</p>
+        </div>
+
           <div v-for="post in filteredPosts" :key="post.id" class="card clickable" @click="openPostModal(post)">
             <img v-if="post.image_url" :src="post.image_url" alt="Item Image" class="card-image" />
             <p class="post-date">{{ post.lost_date || post.found_date }}</p>
@@ -481,6 +487,31 @@ export default {
 
 
 <style scoped>
+/* Add spinner styles */
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+  border: 0.25rem solid #f3f3f3;
+  border-top: 0.25rem solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .dashboard-container {
   padding: 20px;
   background-color: #f5f5f5;

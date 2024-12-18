@@ -1,6 +1,6 @@
 <template>
-  <div class="relative" @click="toggleDropdown">
-    <button class="relative focus:outline-none">
+  <div class="relative">
+    <button class="relative focus:outline-none" @click="toggleDropdown">
       <svg class="w-6 h-6 text-gray-600 hover:text-teal-500" fill="none" stroke="currentColor" stroke-width="2"
         viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path stroke-linecap="round" stroke-linejoin="round"
@@ -22,9 +22,12 @@
 
         <div v-if="notifications.length > 0" class="max-h-64 overflow-y-auto">
           <div v-for="(notification, index) in notifications" :key="index"
-            class="flex items-center px-4 py-3 hover:bg-gray-100 cursor-pointer" @click="markAsRead(notification.id)">
-            <div class="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold">
-              N
+            class="flex items-center px-4 py-3 hover:bg-gray-100 cursor-pointer" 
+            @click.stop="openNotificationDetails(notification)">
+            <div v-if="notification.itemImage" class="w-10 h-10 rounded-full bg-cover bg-center"
+              :style="{ backgroundImage: `url(${notification.itemImage})` }"></div>
+            <div v-else class="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold">
+              {{ notification.user?.name?.charAt(0) || 'N' }}
             </div>
 
             <div class="ml-3">
@@ -43,12 +46,23 @@
         </div>
       </div>
     </div>
+
+    <!-- Notification Modal -->
+    <Teleport to="body">
+      <NotificationModal
+        :show="showNotificationModal"
+        :notification="selectedNotification"
+        @close="closeNotificationModal"
+      />
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import NotificationModal from './NotificationModal.vue';
+import { Teleport } from 'vue';
 
 const isOpen = ref(false);
 const unreadCount = ref(0);
@@ -56,9 +70,23 @@ const notifications = ref([]);
 const users = ref({});
 const items = ref({});
 const currentUserId = ref(null);
+const showNotificationModal = ref(false);
+const selectedNotification = ref(null);
 
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
+};
+
+const openNotificationDetails = async (notification) => {
+  selectedNotification.value = notification;
+  showNotificationModal.value = true;
+  isOpen.value = false;
+  await markAsRead(notification.id);
+};
+
+const closeNotificationModal = () => {
+  showNotificationModal.value = false;
+  selectedNotification.value = null;
 };
 
 const fetchCurrentUser = async () => {
@@ -87,10 +115,10 @@ const fetchItems = async () => {
     const foundItemsResponse = await axios.get('/found-items');
 
     lostItemsResponse.data.forEach(item => {
-      items.value[item.id] = { item_name: item.item_name, user_id: item.user_id };
+      items.value[item.id] = { item_name: item.item_name, user_id: item.user_id, item_image: item.item_image };
     });
     foundItemsResponse.data.forEach(item => {
-      items.value[item.id] = { item_name: item.item_name, user_id: item.user_id };
+      items.value[item.id] = { item_name: item.item_name, user_id: item.user_id, item_image: item.item_image };
     });
   } catch (error) {
     console.error('Error fetching items:', error);
@@ -102,20 +130,22 @@ const fetchNotifications = async () => {
     const response = await axios.get('/notifications');
     notifications.value = response.data
       .filter(notification => {
-        const relatedLostItem = items.value[notification.notifiable_id];
-        const isUserItem = relatedLostItem && relatedLostItem.user_id === currentUserId.value;
+        // Check if the notification is related to the user's items
+        const relatedItem = items.value[notification.notifiable_id];
+        const isUserItem = relatedItem && relatedItem.user_id === currentUserId.value;
         return isUserItem;
       })
       .map(notification => {
         notification.user = users.value[notification.user_id] || { username: 'Unknown User' };
-        notification.itemName = items.value[notification.notifiable_id]?.item_name || 'Unknown Item';
+        const item = items.value[notification.notifiable_id];
+        notification.itemName = item?.item_name || 'Unknown Item';
+        notification.itemImage = notification.data?.image || item?.item_image || null;
         notification.comment = notification.data?.comment || 'No details available';
         notification.created_at = formatDate(notification.created_at);
         return notification;
       });
 
     notifications.value.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
     unreadCount.value = notifications.value.filter((n) => !n.read_at).length;
   } catch (error) {
     console.error('Error fetching notifications:', error);
@@ -136,7 +166,13 @@ const markAsRead = async (id) => {
       unreadCount.value = notifications.value.filter(n => !n.read_at).length;
     }
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    if (error.response?.status === 403) {
+      console.error('You do not have permission to mark this notification as read');
+      // Refresh notifications to ensure we have the latest state
+      await fetchNotifications();
+    } else {
+      console.error('Error marking notification as read:', error);
+    }
   }
 };
 

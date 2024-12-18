@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Models\Notification;
 use App\Models\User;
 use App\Models\LostItem;
+use App\Models\FoundItem;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
@@ -22,15 +23,23 @@ class NotificationController extends Controller
     {
         $notification = Notification::find($id);
         if ($notification) {
+            // Check if the notification is for a lost item
             $lostItem = LostItem::find($notification->notifiable_id);
             if ($lostItem && $lostItem->user_id == $request->user()->id) {
                 $notification->read_at = now();
                 $notification->save();
-
                 return response()->json(['message' => 'Notification marked as read']);
             }
 
-            return response()->json(['message' => 'Notification not related to the current user\'s lost item'], 403);
+            // Check if the notification is for a found item
+            $foundItem = FoundItem::find($notification->notifiable_id);
+            if ($foundItem && $foundItem->user_id == $request->user()->id) {
+                $notification->read_at = now();
+                $notification->save();
+                return response()->json(['message' => 'Notification marked as read']);
+            }
+
+            return response()->json(['message' => 'Notification not related to any of your items'], 403);
         }
 
         return response()->json(['message' => 'Notification not found'], 404);
