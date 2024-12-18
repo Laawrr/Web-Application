@@ -160,7 +160,7 @@
                             <i class="fas fa-map-marker-alt"></i> Add Location (Click to Enable Map)
                           </button>
                         </div>
-                        <div v-if="locationSelected" class="location-status">
+                        <div v-if="locationSelected" class="location-status" style="margin-bottom: 320px" >
                           <span v-if="newItem.location">Location selected ✓</span>
                           <span v-else>Click on the map to place a pin</span>
                         </div>
