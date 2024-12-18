@@ -100,22 +100,16 @@ const fetchItems = async () => {
 const fetchNotifications = async () => {
   try {
     const response = await axios.get('/notifications');
-    notifications.value = response.data
-      .filter(notification => {
-        const relatedLostItem = items.value[notification.notifiable_id];
-        const isUserItem = relatedLostItem && relatedLostItem.user_id === currentUserId.value;
-        return isUserItem;
-      })
-      .map(notification => {
-        notification.user = users.value[notification.user_id] || { username: 'Unknown User' };
-        notification.itemName = items.value[notification.notifiable_id]?.item_name || 'Unknown Item';
-        notification.comment = notification.data?.comment || 'No details available';
-        notification.created_at = formatDate(notification.created_at);
-        return notification;
-      });
+    notifications.value = response.data.notifications.map(notification => {
+      return {
+        ...notification,
+        user: users.value[notification.data.user_id] || { name: notification.data.commenter_name },
+        itemName: notification.data.item_name || 'Unknown Item',
+        created_at: formatDate(notification.created_at)
+      };
+    });
 
     notifications.value.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
     unreadCount.value = notifications.value.filter((n) => !n.read_at).length;
   } catch (error) {
     console.error('Error fetching notifications:', error);

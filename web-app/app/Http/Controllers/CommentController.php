@@ -7,7 +7,7 @@ use App\Models\LostItem;
 use App\Models\FoundItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-
+use App\Models\Notification;
 
 class CommentController extends Controller
 {
@@ -52,6 +52,22 @@ class CommentController extends Controller
 
             // Load the user relationship for the response
             $comment->load('user:id,name');
+
+            // Create notification for the item owner
+            $item = $model::with('user')->findOrFail($request->item_id);
+            if ($item->user_id !== auth()->id()) {
+                Notification::create([
+                    'type' => 'new_comment',
+                    'user_id' => $item->user_id,
+                    'data' => [
+                        'item_type' => $request->item_type,
+                        'item_id' => $item->id,
+                        'item_name' => $item->item_name,
+                        'commenter_name' => auth()->user()->name,
+                        'comment_text' => $request->text
+                    ]
+                ]);
+            }
 
             return response()->json(['success' => true, 'comment' => $comment], 201);
         } catch (\Exception $e) {
