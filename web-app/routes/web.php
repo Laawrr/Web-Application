@@ -11,7 +11,6 @@ use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\MarkerController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\CommentController;
-use App\Http\Middleware\RestrictLostItemsAccess;
 use App\Http\Middleware\CheckRole;
 use App\Models\User;
 use Illuminate\Foundation\Application;
@@ -50,13 +49,8 @@ Route::get('/', function () {
 
 // Dashboard Route
 Route::get('/dashboard', function () {
-    if (CheckRole::class . ':admin') {
-        return redirect('/admin'); // Redirect to /admin if the user is an admin
-    }
-
-    return Inertia::render('Dashboard'); // Otherwise, render the default dashboard
+    return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
-
 
 // Profile Routes
 Route::middleware('auth')->group(function () {
@@ -83,7 +77,7 @@ Route::middleware([CheckRole::class . ':admin'])->group(function () {
 });
 
 // Lost Items routes
-Route::prefix('lost-items')->middleware(RestrictLostItemsAccess::class)->group(function () {
+Route::prefix('lost-items')->group(function () {
     Route::get('/', [lostItemController::class, 'index'])->name('lost-items.index'); // List all lost items
     Route::get('{id}', [lostItemController::class, 'show'])->name('lost-items.show'); // Display a specific lost item
     Route::post('/', [lostItemController::class, 'store'])->name('lost-items.store'); // Store a new lost item

@@ -134,9 +134,9 @@ onMounted(() => {
 
 const redirectToNewsfeed = () => {
     if (isLoggedIn.value) {
-        router.push('/newsfeed'); // Redirect to newsfeed
+        window.location.href = '/newsfeed';  
     } else {
-        showLoginModal.value = true; // Show login modal if not logged in
+        showLoginModal.value = true; 
     }
 };
 
