@@ -11,7 +11,7 @@
       @input="searchLocation"
       :loading="loadingSearch"
     ></v-text-field>
-    <div class="map-wrapper" :class="{ 'map-disabled': disabled }">
+    <div class="map-wrapper" :class="{ 'map-disabled': disabled }" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
       <div id="map" ref="mapRef" class="custom-map"></div>
       <div v-if="isLoading" class="loading-overlay">
         <div class="loading-content">
@@ -60,6 +60,8 @@ export default {
       currentMarker: null,
       userLocationMarker: null,
       watchId: null,
+      startX: null,
+      endX: null,
     };
   },
   mounted() {
@@ -307,6 +309,32 @@ export default {
         .finally(() => {
           this.loadingSearch = false;
         });
+    },
+    handleTouchStart(event) {
+      this.startX = event.touches[0].clientX;
+    },
+    handleTouchMove(event) {
+      this.endX = event.touches[0].clientX;
+    },
+    handleTouchEnd() {
+      const deltaX = this.endX - this.startX;
+      if (deltaX > 50) {
+        // Swipe right
+        this.swipeRight();
+      } else if (deltaX < -50) {
+        // Swipe left
+        this.swipeLeft();
+      }
+    },
+    swipeRight() {
+      // Logic to shift map view right
+      console.log('Swiped right');
+      // Add your logic here to change the map view
+    },
+    swipeLeft() {
+      // Logic to shift map view left
+      console.log('Swiped left');
+      // Add your logic here to change the map view
     },
   },
   beforeDestroy() {
