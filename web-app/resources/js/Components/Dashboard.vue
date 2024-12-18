@@ -67,9 +67,9 @@ export default {
   data() {
     return {
       stats: {
-        totalUsers: 1,
-        lostItems: 2,
-        foundItems: 1,
+        totalUsers: 0,
+        lostItems: 0,
+        foundItems: 0,
         claims: 0,
       },
       pieChartData: {
@@ -96,43 +96,33 @@ export default {
   mounted() {
     this.fetchDashboardData();
   },
-  watch: {
-    stats: {
-      handler(newStats) {
-        console.log('Stats updated:', newStats);
-        // Update chart data
-        this.pieChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
-        this.barChartData.datasets[0].data = [newStats.lostItems, newStats.foundItems, newStats.claims];
-        // Force charts to update
-        this.$nextTick(() => {
-          this.$refs.pieChart.chart.update();
-          this.$refs.barChart.chart.update();
-        });
-      },
-      deep: true
-    }
-  },
   methods: {
     async fetchDashboardData() {
       try {
-        const response = await fetch('/admin/dashboard');
+        const response = await fetch('admin/dashboard');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        
+        console.log('API Response Data:', data); // Log the entire response data
+
         // Update the stats and charts
+        console.log('Updating stats with data:', data);
         this.stats = {
           totalUsers: data.totalUsers,
           lostItems: data.lostItems,
           foundItems: data.foundItems,
           claims: data.claims,
         };
-        
+
         // Update pie and bar chart data
         this.pieChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
         this.barChartData.datasets[0].data = [data.lostItems, data.foundItems, data.claims];
-        
+
+        // Log the updated chart data
+        console.log('Updated Pie Chart Data:', this.pieChartData);
+        console.log('Updated Bar Chart Data:', this.barChartData);
+
         this.$nextTick(() => {
           this.$refs.pieChart.chart.update();
           this.$refs.barChart.chart.update();
