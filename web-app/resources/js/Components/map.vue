@@ -62,6 +62,8 @@ export default {
       watchId: null,
       startX: null,
       endX: null,
+      _lastPinchDist: null,
+      initialLocationSet: false,
     };
   },
   mounted() {
@@ -87,17 +89,75 @@ export default {
         this.map = L.map(mapContainer, {
           zoomControl: true,
           zoomAnimation: true,
-          dragging: !this.disabled,
-          touchZoom: !this.disabled,
-          doubleClickZoom: !this.disabled,
-          scrollWheelZoom: !this.disabled,
-          boxZoom: !this.disabled,
-          keyboard: !this.disabled,
+          dragging: true,
+          touchZoom: true,
+          doubleClickZoom: true,
+          scrollWheelZoom: true,
+          boxZoom: true,
+          keyboard: true,
+          tap: !L.Browser.mobile,
+          bounceAtZoomLimits: true,
+          maxZoom: 18,
+          minZoom: 3
         });
+
+        // Add zoom control with custom position
+        L.control.zoom({
+          position: 'bottomright'
+        }).addTo(this.map);
+
+        // Add scale control
+        L.control.scale({
+          imperial: false,
+          position: 'bottomleft'
+        }).addTo(this.map);
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "OpenStreetMap contributors",
+          maxZoom: 18,
+          tileSize: 512,
+          zoomOffset: -1
         }).addTo(this.map);
+
+        // Handle touch events directly on the map element
+        const mapElement = this.$refs.mapRef;
+        let startTouch = null;
+        let currentTouch = null;
+
+        mapElement.addEventListener('touchstart', (e) => {
+          startTouch = e.touches[0];
+        }, { passive: true });
+
+        mapElement.addEventListener('touchmove', (e) => {
+          if (!startTouch) return;
+          currentTouch = e.touches[0];
+          
+          // Calculate the distance moved
+          const deltaX = currentTouch.clientX - startTouch.clientX;
+          const deltaY = currentTouch.clientY - startTouch.clientY;
+          
+          // Pan the map
+          this.map.panBy([-deltaX, -deltaY]);
+          
+          // Update the start position
+          startTouch = currentTouch;
+        }, { passive: true });
+
+        mapElement.addEventListener('touchend', () => {
+          startTouch = null;
+          currentTouch = null;
+        }, { passive: true });
+
+        // Handle pinch zoom using hammer.js if available
+        if (typeof Hammer !== 'undefined') {
+          const hammer = new Hammer(mapElement);
+          hammer.get('pinch').set({ enable: true });
+          
+          hammer.on('pinch', (e) => {
+            const delta = e.scale > 1 ? 1 : -1;
+            this.map.setZoom(this.map.getZoom() + delta);
+          });
+        }
 
         // Set a default view immediately
         this.map.setView([14.5995, 120.9842], 13); // Manila coordinates
@@ -138,54 +198,7 @@ export default {
         });
 
         // Get current location
-        if ("geolocation" in navigator) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const { latitude, longitude } = position.coords;
-              
-              // Set map view to user location
-              this.map.setView([latitude, longitude], 15);
-
-              // Add user location marker
-              const userIcon = L.divIcon({
-                html: '<div class="user-location-dot"></div>',
-                className: "user-location-marker",
-                iconSize: [12, 12],
-              });
-
-              if (this.userLocationMarker) {
-                this.map.removeLayer(this.userLocationMarker);
-              }
-
-              this.userLocationMarker = L.marker([latitude, longitude], {
-                icon: userIcon,
-                zIndexOffset: 1000,
-              })
-                .addTo(this.map)
-                .bindPopup("Your location")
-                .openPopup();
-
-              // Watch for location updates
-              this.watchId = navigator.geolocation.watchPosition(
-                (newPosition) => {
-                  const newLat = newPosition.coords.latitude;
-                  const newLng = newPosition.coords.longitude;
-                  if (this.userLocationMarker) {
-                    this.userLocationMarker.setLatLng([newLat, newLng]);
-                  }
-                },
-                null,
-                { enableHighAccuracy: true }
-              );
-            },
-            (error) => {
-              console.error("Geolocation error:", error);
-              this.showSnackbar("Unable to get your location. Please enable location services.", "error");
-            }
-          );
-        } else {
-          this.showSnackbar("Geolocation is not supported by your browser", "error");
-        }
+        this.getCurrentLocation();
 
         this.map.whenReady(() => {
           this.isLoading = false;
@@ -203,78 +216,60 @@ export default {
     },
     getCurrentLocation() {
       if (!navigator.geolocation) {
-        this.showSnackbar("Geolocation is not supported by your browser", "error");
+        this.showSnackbar("Geolocation is not supported by your browser.", "error");
         return;
       }
 
       const options = {
         enableHighAccuracy: true,
-        timeout: 5000, // Reduced timeout
+        timeout: 5000,
         maximumAge: 0
       };
 
-      navigator.geolocation.getCurrentPosition(
+      // Watch position instead of one-time get
+      this.watchId = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           
-          if (this.map) {
-            // Set map view to user location
-            this.map.setView([latitude, longitude], 15);
-
-            // Create user location marker
-            if (this.userLocationMarker) {
-              this.map.removeLayer(this.userLocationMarker);
-            }
-
+          // Update or create user location marker
+          if (this.userLocationMarker) {
+            this.userLocationMarker.setLatLng([latitude, longitude]);
+          } else {
+            // Create a custom icon for user location
             const userIcon = L.divIcon({
-              html: '<div class="user-location-dot"></div>',
-              className: "user-location-marker",
-              iconSize: [12, 12],
+              className: 'user-location-marker',
+              html: '<div class="marker-dot"></div><div class="marker-pulse"></div>',
+              iconSize: [20, 20],
+              iconAnchor: [10, 10]
             });
 
             this.userLocationMarker = L.marker([latitude, longitude], {
               icon: userIcon,
-              zIndexOffset: 1000,
-            })
-              .addTo(this.map)
-              .bindPopup("Your location")
-              .openPopup();
+              zIndexOffset: 1000, // Keep marker on top
+              interactive: false // Prevent marker from being clickable
+            }).addTo(this.map);
+          }
 
-            // Start watching position for updates
-            if (this.watchId) {
-              navigator.geolocation.clearWatch(this.watchId);
-            }
-
-            this.watchId = navigator.geolocation.watchPosition(
-              (newPosition) => {
-                const newLat = newPosition.coords.latitude;
-                const newLng = newPosition.coords.longitude;
-                if (this.userLocationMarker) {
-                  this.userLocationMarker.setLatLng([newLat, newLng]);
-                }
-              },
-              null,
-              options
-            );
+          // Only set view on initial load or when location changes significantly
+          if (!this.initialLocationSet) {
+            this.map.setView([latitude, longitude], 15);
+            this.initialLocationSet = true;
           }
         },
         (error) => {
-          let errorMessage = "Error getting your location. ";
-          switch(error.code) {
+          let message = "Unable to retrieve your location.";
+          switch (error.code) {
             case error.PERMISSION_DENIED:
-              errorMessage += "Please enable location services.";
+              message = "Location access was denied.";
               break;
             case error.POSITION_UNAVAILABLE:
-              errorMessage += "Location information unavailable.";
+              message = "Location information is unavailable.";
               break;
             case error.TIMEOUT:
-              errorMessage += "Request timed out.";
+              message = "Location request timed out.";
               break;
-            default:
-              errorMessage += "An unknown error occurred.";
           }
-          console.error('Geolocation error:', error);
-          this.showSnackbar(errorMessage, "error");
+          this.showSnackbar(message, "error");
         },
         options
       );
@@ -359,30 +354,21 @@ export default {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 500px;
-  padding: 16px;
+  touch-action: pan-x pan-y;
 }
 
 .map-wrapper {
   position: relative;
   width: 100%;
-  height: 100%;
-  min-height: 400px;
+  height: 600px;
   border-radius: 8px;
   overflow: hidden;
-  transition: filter 0.3s ease;
-}
-
-.map-disabled {
-  filter: blur(3px);
-  pointer-events: none;
-  user-select: none;
+  touch-action: none;
 }
 
 .custom-map {
   width: 100%;
   height: 100%;
-  min-height: 400px;
   z-index: 1;
 }
 
@@ -447,5 +433,87 @@ export default {
 
 .input-field {
   margin-bottom: 16px;
+}
+
+/* Add smooth zoom animation */
+.leaflet-zoom-animated {
+  transition: transform 0.25s cubic-bezier(0,0,0.25,1);
+}
+
+/* Improve touch feedback */
+.leaflet-marker-icon {
+  transition: transform 0.2s ease-out;
+}
+
+.leaflet-marker-icon:active {
+  transform: scale(1.1);
+}
+
+/* Add touch ripple effect */
+.leaflet-control-zoom a {
+  position: relative;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: scale(0);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.leaflet-control-zoom a:active::after {
+  transform: scale(2);
+  opacity: 1;
+  transition: 0s;
+}
+
+/* Custom user location marker styles */
+.user-location-marker {
+  position: relative;
+}
+
+.marker-dot {
+  width: 12px;
+  height: 12px;
+  background-color: #4CAF50;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.marker-pulse {
+  width: 24px;
+  height: 24px;
+  background-color: rgba(76, 175, 80, 0.3);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
 }
 </style>
