@@ -27,7 +27,7 @@
           <!-- Post Header -->
           <div class="flex items-center space-x-4 mb-4">
             <h2 class="text-xl font-semibold text-gray-800">{{ item.item_name }}</h2>
-            <p class="text-sm text-gray-500">Reported on: {{ formatDate(item.created_at) }}</p>
+            <p class="text-sm text-gray-500">Posted by: {{ item.userName }} | {{ formatDate(item.created_at) }}</p>
           </div>
 
           <!-- Description -->
@@ -68,6 +68,7 @@
               <!-- List of Comments -->
               <div v-for="comment in item.comments" :key="comment.id" class="bg-gray-100 p-2 rounded-lg mb-2">
                 <div class="flex items-center space-x-2">
+                  <!-- Display user name from the comment object -->
                   <span class="font-semibold text-gray-800">{{ comment.userName }}</span>
                   <p class="text-gray-700">{{ comment.text }}</p>
                 </div>
@@ -83,7 +84,6 @@
   </div>
 </template>
 
-
 <script>
 import { ref, onMounted } from "vue";
 import axios from "axios";
@@ -97,48 +97,115 @@ export default {
     const lostItems = ref([]);
     const loading = ref(true);
     const newComments = ref({});
-    const userName = ref(""); // Store the user's name here
+    const userName = ref(null); // Store the user's name here
+    const currentUserId = ref(null);
 
-    // Fetch the current user's name
-    const fetchUser = async () => {
-      try {
-        const response = await axios.get("/user"); // Assuming the endpoint to fetch user details
-        userName.value = response.data.name; // Update userName with the response
+  // Fetch the current user's ID
+const fetchCurrentUser = async () => {
+  try {
+    // Ensure window.userID is defined and available
+    if (!window.userID) {
+      console.error("window.userID is not defined.");
+      return;
+    }
+
+    const response = await axios.get(window.userID); // Make the API request using window.userID
+    currentUserId.value = response.data.id; // Assign the fetched ID to currentUserId
+    console.log("Fetched user ID:", currentUserId.value);
+
+    // Once the user ID is fetched, fetch the user's name
+    fetchUser();
+  } catch (error) {
+    console.error("Error fetching user ID:", error.message);
+  }
+};
+
+
+// Fetch the current user's name based on the currentUserId
+const fetchUser = async () => {
+  try {
+    // Check if currentUserId is set
+    if (!currentUserId.value) {
+      console.error("Current user ID is not set.");
+      return; // Exit the function if currentUserId is not set
+    }
+
+    const response = await axios.get("/users");
+    console.log("Response data:", response.data);  // Inspect the response
+
+    // Ensure response.data is an array
+    if (Array.isArray(response.data)) {
+      // Find the user based on currentUserId
+      const user = response.data.find(u => u.id === currentUserId.value);
+
+      if (user) {
+        userName.value = user.name; // Assign the name of the user
         console.log("User fetched:", userName.value);
-      } catch (error) {
-        console.error("Error fetching user data:", error.message);
+      } else {
+        console.log("User not found.");
       }
-    };
+    } else {
+      console.error("Invalid response data format. Expected an array.");
+    }
+  } catch (error) {
+    console.error("Error fetching user data:", error.message);
+  }
+};
+
+
 
     // Fetch posts (lost and found items)
-    const fetchPosts = async () => {
-      try {
-        const [lost, found] = await Promise.all([
-          axios.get(window.lostItemsUrl),
-          axios.get(window.foundItemsUrl),
-        ]);
+// Fetch posts (lost and found items)
+const fetchPosts = async () => {
+  try {
+    const [lost, found] = await Promise.all([
+      axios.get(window.lostItemsUrl),
+      axios.get(window.foundItemsUrl),
+    ]);
 
-        const lostPosts = lost.data.map((item) => ({
-          ...item,
-          isFound: false,
-          comments: [],
-          showCommentSection: false,
-        }));
-        const foundPosts = found.data.map((item) => ({
-          ...item,
-          isFound: true,
-          comments: [],
-          showCommentSection: false,
-        }));
+    const lostPosts = lost.data.map(async (item) => {
+      const user = await fetchUserById(item.user_id);  // Fetch the user by ID
+      return {
+        ...item,
+        isFound: false,
+        comments: [],
+        showCommentSection: false,
+        userName: user.name,  // Add the user's name to the item
+      };
+    });
 
-        lostItems.value = [...lostPosts, ...foundPosts];
-        fetchComments(); // Fetch comments after posts are fetched
-      } catch (error) {
-        console.error("Error fetching posts:", error.message);
-      } finally {
-        loading.value = false;
-      }
-    };
+    const foundPosts = found.data.map(async (item) => {
+      const user = await fetchUserById(item.user_id);  // Fetch the user by ID
+      return {
+        ...item,
+        isFound: true,
+        comments: [],
+        showCommentSection: false,
+        userName: user.name,  // Add the user's name to the item
+      };
+    });
+
+    // Resolve the async functions for both lost and found posts
+    lostItems.value = [...await Promise.all(lostPosts), ...await Promise.all(foundPosts)];
+    fetchComments(); // Fetch comments after posts are fetched
+  } catch (error) {
+    console.error("Error fetching posts:", error.message);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Fetch user by ID
+const fetchUserById = async (userId) => {
+  try {
+    const response = await axios.get(`/users/${userId}`);  // Fetch user by ID
+    return response.data;  // Return the user data
+  } catch (error) {
+    console.error(`Error fetching user with ID ${userId}:`, error.message);
+    return { name: 'Unknown User' };  // Return a fallback if the user is not found
+  }
+};
+
 
     // Fetch comments for each post
     const fetchComments = async () => {
@@ -156,7 +223,7 @@ export default {
           // Include user name for each comment
           item.comments = response.data.comments.map(comment => ({
             ...comment,
-            userName: comment.user.name, // Assuming the API response includes user data
+            userName: comment.user.name,
           }));
         } catch (error) {
           console.error(`Error fetching comments for item ${item.id}:`, error.message);
@@ -173,56 +240,73 @@ export default {
     };
 
     // Submit a new comment
-    const submitComment = async (id, type) => {
-      const text = newComments.value[id]?.trim();
-      console.log("Attempting to submit comment", { id, type, text });
+ // Submit a new comment
+const submitComment = async (id, type) => {
+  const text = newComments.value[id]?.trim();
+  console.log("Attempting to submit comment", { id, type, text });
 
-      if (!text) {
-        console.log("No comment text provided.");
-        return;
-      }
+  if (!text) {
+    console.log("No comment text provided.");
+    return;
+  }
 
-      try {
-        console.log("Sending comment to server...");
-        const response = await axios.post("/comments", {
-          item_id: id,
-          item_type: type,
-          text,
-          user_name: userName.value, // Use the fetched user name
-        });
+  try {
+    console.log("Sending comment to server...");
+    const response = await axios.post("/comments", {
+      item_id: id,
+      item_type: type,
+      text,
+      user_name: userName.value,  // Use userName.value here
+    });
 
-        console.log("Response received:", response.data);
+    console.log("Response received:", response.data);
 
-        const item = lostItems.value.find((item) => item.id === id);
-        if (item) {
-          item.comments.push({
-            ...response.data.comment,
-            userName: userName.value, // Add the user name to the new comment
-          });
-          console.log("Updated comments for item:", item);
-        }
+    const item = lostItems.value.find((item) => item.id === id);
+    if (item) {
+      // Create a new comment object with userName
+      const newComment = {
+        ...response.data.comment,
+        userName: userName.value,  // Ensure userName is correctly added to the new comment
+      };
 
-        newComments.value[id] = "";
-        console.log("Cleared input field after submission.");
-      } catch (error) {
-        console.error("Error posting comment:", error.message);
-      }
-    };
+      // Push new comment into the item
+      item.comments = [...item.comments, newComment]; // Ensure reactivity by creating a new array
+
+      // Clear the input field
+      newComments.value[id] = "";
+      console.log("Cleared input field after submission.");
+    }
+  } catch (error) {
+    console.error("Error posting comment:", error.message);
+  }
+};
+
 
     // Format the date to display it in a readable format
-    const formatDate = (date) => new Date(date).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const formatDate = (date) => new Date(date).toLocaleString(undefined, {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
 
     // Fetch the posts and user data when the component is mounted
     onMounted(() => {
-      fetchUser();  // Fetch the current user first
+      fetchCurrentUser();  // Fetch the current user first
       fetchPosts(); // Then fetch the posts
     });
 
-    return { lostItems, loading, newComments, toggleCommentSection, submitComment, formatDate, userName };
+    return {
+      lostItems,
+      loading,
+      formatDate,
+      toggleCommentSection,
+      submitComment,
+      newComments,
+      userName,
+    };
   },
 };
 </script>

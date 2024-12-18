@@ -85,6 +85,7 @@ Route::prefix('lost-items')->group(function () {
 
 Route::prefix('comments')->group(function () {
     Route::get('/{item_type}/{item_id}', [CommentController::class, 'index'])->name('comments.index');
+    Route::get('/', [CommentController::class, 'view'])->name('comments.view');
     Route::post('/', [CommentController::class, 'store'])->name('comments.store');
 });
 

@@ -195,6 +195,7 @@ export default {
       try {
         const response = await axios.get(window.userID);
         this.newItem.user_id = response.data.id;
+        console.log("Fetched user ID:", this.newItem.user_id); 
       } catch (error) {
         console.error("Error fetching user ID:", error.message);
       }
@@ -205,8 +206,16 @@ export default {
           axios.get(window.lostItemsUrl),
           axios.get(window.foundItemsUrl),
         ]);
-        const lostPosts = lostResponse.data.map(post => ({ ...post, isFound: false }));
-        const foundPosts = foundResponse.data.map(post => ({ ...post, isFound: true }));
+
+        // Filter lost and found items by the current user's ID
+        const lostPosts = lostResponse.data
+          .filter(post => post.user_id === this.newItem.user_id)
+          .map(post => ({ ...post, isFound: false }));
+
+        const foundPosts = foundResponse.data
+          .filter(post => post.user_id === this.newItem.user_id)
+          .map(post => ({ ...post, isFound: true }));
+
         this.posts = [...lostPosts, ...foundPosts];
         this.filterPosts();
       } catch (error) {

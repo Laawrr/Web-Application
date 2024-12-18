@@ -69,4 +69,22 @@ class CommentController extends Controller
 
         return response()->json(['comments' => $comments]);
     }
+
+    public function view()
+    {
+        try {
+            // Fetch all comments from both LostItem and FoundItem models
+            $lostItemComments = LostItem::with('comments.user:id,name')->get()->pluck('comments')->flatten();
+            $foundItemComments = FoundItem::with('comments.user:id,name')->get()->pluck('comments')->flatten();
+    
+            // Merge the comments from both models
+            $allComments = $lostItemComments->merge($foundItemComments);
+    
+            // Return the comments as a JSON response
+            return response()->json(['comments' => $allComments]);
+        } catch (\Exception $e) {
+            Log::error('Error in fetching all comments', ['exception' => $e->getMessage()]);
+            return response()->json(['error' => 'Internal Server Error'], 500);
+        }
+    }
 }

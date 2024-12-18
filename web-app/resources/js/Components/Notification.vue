@@ -62,10 +62,22 @@ const unreadCount = ref(0);
 const notifications = ref([]);
 const users = ref({}); // To store user data mapped by user_id
 const items = ref({}); // To store item names mapped by notifiable_id
+const currentUserId = ref(null); // To store the current user's ID
 
 // Toggle the dropdown visibility
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
+};
+
+// Fetch the current user's ID based on window.userID
+const fetchCurrentUser = async () => {
+  try {
+    const response = await axios.get(window.userID); // Make the API request using window.userID
+    currentUserId.value = response.data.id; // Assign the fetched ID to currentUserId
+    console.log("Fetched user ID:", currentUserId.value);
+  } catch (error) {
+    console.error("Error fetching user ID:", error.message);
+  }
 };
 
 // Fetch users separately and map them by user_id
@@ -102,17 +114,19 @@ const fetchItems = async () => {
 const fetchNotifications = async () => {
   try {
     const response = await axios.get('/notifications'); // Fetch notifications
-    notifications.value = response.data.map(notification => {
-      // Get the user associated with the notification using user_id
-      notification.user = users.value[notification.user_id] || { username: 'Unknown User' };  // Use fallback if user is not found
+    notifications.value = response.data
+      .filter(notification => notification.user_id !== currentUserId.value) // Exclude current user's own notifications
+      .map(notification => {
+        // Get the user associated with the notification using user_id
+        notification.user = users.value[notification.user_id] || { username: 'Unknown User' };  // Use fallback if user is not found
 
-      // Get the item name using the notifiable_id
-      notification.itemName = items.value[notification.notifiable_id] || 'Unknown Item';  // Use fallback if item is not found
+        // Get the item name using the notifiable_id
+        notification.itemName = items.value[notification.notifiable_id] || 'Unknown Item';  // Use fallback if item is not found
 
-      notification.comment = notification.data?.comment || 'No details available';
-      notification.created_at = formatDate(notification.created_at);
-      return notification;
-    });
+        notification.comment = notification.data?.comment || 'No details available';
+        notification.created_at = formatDate(notification.created_at);
+        return notification;
+      });
 
     // Sort notifications by created_at in descending order
     notifications.value.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -144,13 +158,15 @@ const markAsRead = async (id) => {
   }
 };
 
-// Fetch users, items, and notifications when the component is mounted
+// Fetch data when the component is mounted
 onMounted(async () => {
-  await fetchUsers();  // First fetch users
-  await fetchItems();  // Then fetch items
-  await fetchNotifications();  // Finally fetch notifications
+  await fetchCurrentUser(); // Fetch the current user's ID when the component is mounted
+  await fetchUsers();  // Fetch users
+  await fetchItems();  // Fetch items
+  await fetchNotifications();  // Fetch notifications
 });
 </script>
+
 
 <style scoped>
 /* Optional: Customize the notification bell */
