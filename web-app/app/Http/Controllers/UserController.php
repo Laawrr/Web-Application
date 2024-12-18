@@ -69,4 +69,10 @@ class UserController extends Controller
         $userID = Auth::id();
         return response()->json(['id' => $userID]);
     }
+
+    public function show($id)
+    {
+        $user = User::findOrFail($id);
+        return response()->json($user);
+    }
 }

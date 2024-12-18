@@ -10,6 +10,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\MarkerController;
 use App\Http\Controllers\SessionController;
+use App\Http\Controllers\CommentController;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -79,6 +80,13 @@ Route::prefix('lost-items')->group(function () {
     Route::post('/', [lostItemController::class, 'store'])->name('lost-items.store'); // Store a new lost item
     Route::put('{id}', [lostItemController::class, 'update'])->name('lost-items.update'); // Update an existing lost item
     Route::delete('{id}', [lostItemController::class, 'destroy'])->name('lost-items.destroy'); // Delete a lost item
+});
+
+
+Route::prefix('comments')->group(function () {
+    Route::get('/{item_type}/{item_id}', [CommentController::class, 'index'])->name('comments.index');
+    Route::get('/', [CommentController::class, 'view'])->name('comments.view');
+    Route::post('/', [CommentController::class, 'store'])->name('comments.store');
 });
 
 // Found Items Routes

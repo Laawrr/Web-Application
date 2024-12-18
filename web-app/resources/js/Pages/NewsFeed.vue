@@ -1,13 +1,11 @@
 <template>
   <div class="flex flex-col min-h-screen bg-gray-100">
-
     <!-- Header -->
     <HeaderBar class="w-full shadow-md bg-white" />
 
     <!-- Main Content -->
     <div class="flex-grow max-w-5xl mx-auto py-12 px-4 md:px-8">
-
-      <!-- Title of the Feed -->
+      <!-- Title -->
       <h1 class="text-4xl font-semibold text-center text-blue-900 mb-8">Lost Items News Feed</h1>
 
       <!-- Loading State -->
@@ -16,77 +14,69 @@
         <span>Loading...</span>
       </div>
 
-      <!-- Lost items list -->
+      <!-- Posts Section -->
       <div v-else>
-        <div v-for="item in lostItems" :key="item.id" class="bg-white shadow-lg rounded-2xl mb-8 p-6 transition-all transform hover:scale-102 hover:shadow-2xl duration-300">
+        <div v-for="item in lostItems" :key="item.id"
+          class="bg-white shadow-lg rounded-2xl mb-8 p-6 hover:shadow-2xl hover:scale-102 transition-all duration-300">
+          <!-- LOST or FOUND Label -->
+          <div :class="item.isFound ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+            class="uppercase text-xs font-semibold py-1 px-3 rounded-full inline-block mb-4">
+            {{ item.isFound ? 'FOUND' : 'LOST' }}
+          </div>
 
           <!-- Post Header -->
           <div class="flex items-center space-x-4 mb-4">
-            <div>
-              <h2 class="text-xl font-semibold text-gray-800">{{ item.title }}</h2>
-              <p class="text-sm text-gray-500">Reported on: {{ formatDate(item.created_at) }}</p>
-            </div>
+            <h2 class="text-xl font-semibold text-gray-800">{{ item.item_name }}</h2>
+            <p class="text-sm text-gray-500">Posted by: {{ item.userName }} | {{ formatDate(item.created_at) }}</p>
           </div>
 
-          <!-- Post Description -->
+          <!-- Description -->
           <p class="text-gray-700 text-base mb-4">{{ item.description }}</p>
 
-          <!-- Optional Image (if available) -->
-          <div v-if="item.image_url" class="mb-4 rounded-lg overflow-hidden">
-            <img :src="item.image_url" alt="Lost Item Image" class="w-full object-cover rounded-lg shadow-sm">
+          <!-- Image -->
+          <div v-if="item.image_url" class="mb-4 overflow-hidden rounded-lg">
+            <img :src="item.image_url" alt="Lost Item" class="w-full object-cover rounded-lg shadow-sm" />
           </div>
 
-          <!-- Comment Section -->
+          <!-- Comments Section -->
           <div class="mt-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-2">Comments</h3>
 
-            <!-- Comment Icon to trigger comment input -->
-            <div class="flex items-center space-x-4 mb-4">
-              <button 
-                @click="toggleCommentSection(item.id)"
-                class="flex items-center space-x-2 text-blue-500 hover:text-blue-600"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 10-4 0 2 2 0 004 0zM19 19H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2z" />
-                </svg>
-                <span class="text-sm">Comment</span>
-              </button>
-            </div>
+            <!-- Toggle Button -->
+            <button @click="toggleCommentSection(item.id)"
+              class="flex items-center space-x-2 text-blue-500 hover:text-blue-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M21 15a2 2 0 10-4 0 2 2 0 004 0zM19 19H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2z" />
+              </svg>
+              <span>Comment</span>
+            </button>
 
-            <!-- Comment input form (toggle visibility based on click) -->
-            <div v-if="item.showCommentSection" class="transition-all duration-500 ease-in-out mt-4">
+            <!-- Comment Input -->
+            <div v-if="item.showCommentSection" class="mt-4">
               <div class="flex items-center space-x-4 mb-4">
-                <input 
-                  v-model="newComment" 
-                  type="text" 
-                  @input="onCommentInput(item.id)"
-                  class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Add a comment..." 
-                />
-                <button 
-                  @click="submitComment(item.id)" 
-                  :disabled="newComment.trim() === ''"
-                  class="bg-blue-500 text-white p-2 rounded-lg disabled:opacity-50"
-                >
+                <input v-model="newComments[item.id]" type="text" placeholder="Add a comment..."
+                  class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                <button @click="submitComment(item.id, item.isFound ? 'found' : 'lost')"
+                  :disabled="!newComments[item.id]?.trim()"
+                  class="bg-blue-500 text-white px-4 py-2 rounded-lg disabled:opacity-50">
                   Post
                 </button>
               </div>
 
-              <!-- List of comments -->
-              <div class="space-y-2">
-                <div v-for="comment in item.comments" :key="comment.id" class="flex items-center space-x-2 bg-gray-100 p-2 rounded-lg">
-                  <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center">
-                    <span class="font-semibold text-sm">U</span>
-                  </div>
-                  <p class="text-gray-700 text-sm">{{ comment.text }}</p>
+              <!-- List of Comments -->
+              <div v-for="comment in item.comments" :key="comment.id" class="bg-gray-100 p-2 rounded-lg mb-2">
+                <div class="flex items-center space-x-2">
+                  <!-- Display user name from the comment object -->
+                  <span class="font-semibold text-gray-800">{{ comment.userName }}</span>
+                  <p class="text-gray-700">{{ comment.text }}</p>
                 </div>
               </div>
             </div>
           </div>
-          
         </div>
       </div>
-
     </div>
 
     <!-- Footer -->
@@ -95,150 +85,239 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
-import axios from 'axios';
-import HeaderBar from '@/Components/HeaderBar.vue';
-import FooterBar from '@/Components/FooterBar.vue';
+import { ref, onMounted } from "vue";
+import axios from "axios";
+import HeaderBar from "@/Components/HeaderBar.vue";
+import FooterBar from "@/Components/FooterBar.vue";
 
 export default {
-  name: 'NewsFeed',
-  components: {
-    HeaderBar,
-    FooterBar
-  },
+  name: "NewsFeed",
+  components: { HeaderBar, FooterBar },
   setup() {
     const lostItems = ref([]);
     const loading = ref(true);
-    const newComment = ref(""); // For storing the comment text
+    const newComments = ref({});
+    const userName = ref(null); // Store the user's name here
+    const currentUserId = ref(null);
 
-    // Sample output data of two lost items with comments
-    const sampleLostItems = [
-      {
-        id: 1,
-        title: 'Lost Wallet at Central Park',
-        description: 'I lost my wallet at Central Park around 3 PM. It is black with a few cards and some cash inside.',
-        image_url: 'https://grandeurstore.ph/cdn/shop/files/vanilla_5140ee5f-dd3f-4d1f-a21a-40932793339d.jpg?v=1710850069&width=823',
-        created_at: '2024-12-16T12:00:00Z',
-        comments: [
-          
-        ],
-        showCommentSection: false // Toggle visibility of the comment section
-      },
-      {
-        id: 2,
-        title: 'Lost Keys near Subway Station',
-        description: 'A set of keys was found near the subway station entrance. The keys are attached to a red keychain.',
-        image_url: 'https://a-us.storyblok.com/f/1015476/1920x1080/9874ed74da/homepage-hero-1920px-x-1080px.png/m/1280x0',
-        created_at: '2024-12-16T14:00:00Z',
-        comments: [
-          
-        ],
-        showCommentSection: false // Toggle visibility of the comment section
-      }
-    ];
+  // Fetch the current user's ID
+const fetchCurrentUser = async () => {
+  try {
+    // Ensure window.userID is defined and available
+    if (!window.userID) {
+      console.error("window.userID is not defined.");
+      return;
+    }
 
-    // Simulate fetching lost items (using the sample data for now)
-    const fetchLostItems = async () => {
-      try {
-        // Uncomment this line to fetch real data
-        // const response = await axios.get('http://localhost:5000/lost-items');
-        lostItems.value = sampleLostItems;  // Use the two sample lost items
-      } catch (error) {
-        console.error('Error fetching lost items:', error);
-      } finally {
-        loading.value = false;
+    const response = await axios.get(window.userID); // Make the API request using window.userID
+    currentUserId.value = response.data.id; // Assign the fetched ID to currentUserId
+    console.log("Fetched user ID:", currentUserId.value);
+
+    // Once the user ID is fetched, fetch the user's name
+    fetchUser();
+  } catch (error) {
+    console.error("Error fetching user ID:", error.message);
+  }
+};
+
+
+// Fetch the current user's name based on the currentUserId
+const fetchUser = async () => {
+  try {
+    // Check if currentUserId is set
+    if (!currentUserId.value) {
+      console.error("Current user ID is not set.");
+      return; // Exit the function if currentUserId is not set
+    }
+
+    const response = await axios.get("/users");
+    console.log("Response data:", response.data);  // Inspect the response
+
+    // Ensure response.data is an array
+    if (Array.isArray(response.data)) {
+      // Find the user based on currentUserId
+      const user = response.data.find(u => u.id === currentUserId.value);
+
+      if (user) {
+        userName.value = user.name; // Assign the name of the user
+        console.log("User fetched:", userName.value);
+      } else {
+        console.log("User not found.");
       }
+    } else {
+      console.error("Invalid response data format. Expected an array.");
+    }
+  } catch (error) {
+    console.error("Error fetching user data:", error.message);
+  }
+};
+
+
+
+    // Fetch posts (lost and found items)
+// Fetch posts (lost and found items)
+const fetchPosts = async () => {
+  try {
+    const [lost, found] = await Promise.all([
+      axios.get(window.lostItemsUrl),
+      axios.get(window.foundItemsUrl),
+    ]);
+
+    const lostPosts = lost.data.map(async (item) => {
+      const user = await fetchUserById(item.user_id);  // Fetch the user by ID
+      return {
+        ...item,
+        isFound: false,
+        comments: [],
+        showCommentSection: false,
+        userName: user.name,  // Add the user's name to the item
+      };
+    });
+
+    const foundPosts = found.data.map(async (item) => {
+      const user = await fetchUserById(item.user_id);  // Fetch the user by ID
+      return {
+        ...item,
+        isFound: true,
+        comments: [],
+        showCommentSection: false,
+        userName: user.name,  // Add the user's name to the item
+      };
+    });
+
+    // Resolve the async functions for both lost and found posts
+    lostItems.value = [...await Promise.all(lostPosts), ...await Promise.all(foundPosts)];
+    fetchComments(); // Fetch comments after posts are fetched
+  } catch (error) {
+    console.error("Error fetching posts:", error.message);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Fetch user by ID
+const fetchUserById = async (userId) => {
+  try {
+    const response = await axios.get(`/users/${userId}`);  // Fetch user by ID
+    return response.data;  // Return the user data
+  } catch (error) {
+    console.error(`Error fetching user with ID ${userId}:`, error.message);
+    return { name: 'Unknown User' };  // Return a fallback if the user is not found
+  }
+};
+
+
+    // Fetch comments for each post
+    const fetchComments = async () => {
+      console.log("Fetching comments for all items...");
+
+      for (let item of lostItems.value) {
+        console.log(`Fetching comments for item with ID: ${item.id}, type: ${item.isFound ? 'found' : 'lost'}`);
+
+        try {
+          const itemType = item.isFound ? 'found' : 'lost';
+          const response = await axios.get(`/comments/${itemType}/${item.id}`);
+
+          console.log(`Comments fetched for item ${item.id}:`, response.data.comments);
+
+          // Include user name for each comment
+          item.comments = response.data.comments.map(comment => ({
+            ...comment,
+            userName: comment.user.name,
+          }));
+        } catch (error) {
+          console.error(`Error fetching comments for item ${item.id}:`, error.message);
+        }
+      }
+
+      console.log("Finished fetching comments for all items.");
     };
 
     // Toggle the visibility of the comment section
-    const toggleCommentSection = (itemId) => {
-      const item = lostItems.value.find(item => item.id === itemId);
-      item.showCommentSection = !item.showCommentSection;
-    };
-
-    // Handle the comment input to hide suggestions
-    const onCommentInput = (itemId) => {
-      if (newComment.value.trim().length <= 1) {
-        const item = lostItems.value.find(item => item.id === itemId);
-        item.suggestedComments = [];
-      }
+    const toggleCommentSection = (id) => {
+      const item = lostItems.value.find((item) => item.id === id);
+      if (item) item.showCommentSection = !item.showCommentSection;
     };
 
     // Submit a new comment
-    const submitComment = (itemId) => {
-      if (newComment.value.trim() !== "") {
-        const item = lostItems.value.find(item => item.id === itemId);
-        item.comments.push({ id: Date.now(), text: newComment.value }); // Add new comment with a unique id
-        newComment.value = ""; // Clear the input field
-      }
-    };
+ // Submit a new comment
+const submitComment = async (id, type) => {
+  const text = newComments.value[id]?.trim();
+  console.log("Attempting to submit comment", { id, type, text });
 
-    const formatDate = (dateString) => {
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
-    };
+  if (!text) {
+    console.log("No comment text provided.");
+    return;
+  }
 
-    onMounted(() => {
-      fetchLostItems();
+  try {
+    console.log("Sending comment to server...");
+    const response = await axios.post("/comments", {
+      item_id: id,
+      item_type: type,
+      text,
+      user_name: userName.value,  // Use userName.value here
     });
 
-    return { lostItems, loading, formatDate, newComment, submitComment, toggleCommentSection, onCommentInput };
+    console.log("Response received:", response.data);
+
+    const item = lostItems.value.find((item) => item.id === id);
+    if (item) {
+      // Create a new comment object with userName
+      const newComment = {
+        ...response.data.comment,
+        userName: userName.value,  // Ensure userName is correctly added to the new comment
+      };
+
+      // Push new comment into the item
+      item.comments = [...item.comments, newComment]; // Ensure reactivity by creating a new array
+
+      // Clear the input field
+      newComments.value[id] = "";
+      console.log("Cleared input field after submission.");
+    }
+  } catch (error) {
+    console.error("Error posting comment:", error.message);
   }
+};
+
+
+    // Format the date to display it in a readable format
+    const formatDate = (date) => new Date(date).toLocaleString(undefined, {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
+    // Fetch the posts and user data when the component is mounted
+    onMounted(() => {
+      fetchCurrentUser();  // Fetch the current user first
+      fetchPosts(); // Then fetch the posts
+    });
+
+    return {
+      lostItems,
+      loading,
+      formatDate,
+      toggleCommentSection,
+      submitComment,
+      newComments,
+      userName,
+    };
+  },
 };
 </script>
 
+
 <style scoped>
-/* Add a custom spinner style */
-.spinner-border {
-  border-top-color: transparent;
-}
-
-/* Hover effect on the newsfeed post */
-.post-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-}
-
-.card-image {
-  width: 100%;
-  height: 250px;
-  object-fit: cover;
-  border-radius: 0.5rem;
-}
-
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
-}
-
-.card-footer button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #6b7280;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.card-footer button:hover {
-  color: #008080;
-}
-
-.card-footer button:focus {
+/* Simplified for clarity */
+input:focus {
+  border-color: #3b82f6;
   outline: none;
-}
-
-.card-footer button svg {
-  width: 20px;
-  height: 20px;
-}
-
-/* Add a smooth transition for hover effects */
-.transition-all {
-  transition: all 0.3s ease-in-out;
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
 }
 
 .hover\:scale-102:hover {
@@ -246,33 +325,6 @@ export default {
 }
 
 .hover\:shadow-2xl:hover {
-  box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.15);
-}
-
-/* Ensures the footer is always at the bottom */
-.mt-auto {
-  margin-top: auto;
-}
-
-/* Styling for smooth transition and comment input */
-input:focus {
-  border-color: #008080;
-  box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
-}
-
-/* Style for the comment input box */
-input {
-  border-radius: 50px;
-  padding: 10px 16px;
-  background-color: #fafafa;
-  font-size: 14px;
-  color: #333;
-}
-
-/* Comment card styling */
-.comment-card {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 </style>
