@@ -405,17 +405,19 @@ export default {
 <style scoped>
 .dashboard-container {
   padding: 20px;
-  background-color: #f5f5f5;
+  background-color: #f3f4f6;
   transition: all 0.3s ease;
   min-height: 100vh;
   position: relative;
 }
 
 .dashboard {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  position: relative;
+  padding: 0;  
+  width: 100%;
+}
+
+.featured-posts {
+  padding: 2rem;  
 }
 
 .dashboard-header {
