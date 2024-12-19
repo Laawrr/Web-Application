@@ -58,37 +58,33 @@ class ClaimController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $claim = Claim::findOrFail($id);
-
-        // Validate the claim status
-        $validated = $request->validate([
-            'claim_status' => 'required|in:Pending,Approved,Rejected',
-        ]);
-
-        $claim->update([
-            'claim_status' => $validated['claim_status'],
-        ]);
-
-        return response()->json($claim);
+        try {
+            $claim = Claim::findOrFail($id);
+    
+            // Validate the claim status
+            $validated = $request->validate([
+                'claim_status' => 'required|in:Pending,Approved,Rejected',
+            ]);
+    
+            // Log the validated claim status
+            \Log::info("Claim status being updated for claim ID: $id", ['new_status' => $validated['claim_status']]);
+    
+            // Update the claim status
+            $claim->update([
+                'claim_status' => $validated['claim_status'],
+            ]);
+    
+            return response()->json(['success' => true, 'claim' => $claim], 200);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error("Claim not found for ID: $id");
+            return response()->json(['success' => false, 'message' => 'Claim not found'], 404);
+        } catch (\Exception $e) {
+            \Log::error('Error updating claim status', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to update claim status'], 500);
+        }
     }
+    
 
-    /**
-     * Update the claim status (another method, for UI handling).
-     */
-    public function updateStatus(Request $request, $id)
-    {
-        $claim = Claim::findOrFail($id);
-
-        $validated = $request->validate([
-            'status' => 'required|in:pending,approved,rejected'
-        ]);
-
-        $claim->update([
-            'claim_status' => ucfirst($validated['status'])
-        ]);
-
-        return back()->with('success', 'Claim status updated successfully');
-    }
 
     /**
      * Show a specific claim.
@@ -99,7 +95,13 @@ class ClaimController extends Controller
         return response()->json($claim);
     }
 
-    /**
+    public function showAll() // display all claims
+    {
+        $claim = Claim::all();
+        return response()->json($claim);
+    }
+
+   /**
      * Index claims with item details.
      */
     public function index(Request $request)

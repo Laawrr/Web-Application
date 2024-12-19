@@ -34,6 +34,8 @@ Route::get('/claims', [ClaimController::class, 'index']);
 Route::post('/claims', [ClaimController::class, 'store']);
 Route::put('/claims/{id}', [ClaimController::class, 'update']);
 Route::get('/claims/{id}', [ClaimController::class, 'show']);
+Route::get('/claim-items', [ClaimController::class, 'showAll']);
+
 
 // Notification Routes (Authenticated)
 Route::middleware('auth:sanctum')->group(function () {
