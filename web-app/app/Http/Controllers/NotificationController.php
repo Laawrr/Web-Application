@@ -11,6 +11,7 @@ use App\Models\FoundItem;
 use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class NotificationController extends Controller
 {
@@ -20,8 +21,8 @@ class NotificationController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($notification) {
-                // Parse the data to get user information
-                $data = json_decode($notification->data, true);
+                // Get the data - it's already an array due to the cast in the model
+                $data = $notification->data;
                 
                 // Get the comment author's name if this is a comment notification
                 $userName = 'Unknown User';
@@ -29,12 +30,12 @@ class NotificationController extends Controller
                     if (isset($data['commenter_name'])) {
                         $userName = $data['commenter_name'];
                     } elseif (isset($data['comment_id'])) {
-                        $comment = \App\Models\Comment::with('user')->find($data['comment_id']);
+                        $comment = Comment::with('user')->find($data['comment_id']);
                         if ($comment && $comment->user) {
                             $userName = $comment->user->name;
                             // Update the notification data to include the commenter name
                             $data['commenter_name'] = $userName;
-                            $notification->data = json_encode($data);
+                            $notification->data = $data;
                             $notification->save();
                         }
                     }
@@ -46,7 +47,10 @@ class NotificationController extends Controller
                 return [
                     'id' => $notification->id,
                     'type' => $notification->type,
-                    'data' => $data, // Return parsed data instead of JSON string
+                    'title' => $notification->title,
+                    'message' => $notification->message,
+                    'data' => $data,
+                    'read' => (bool)$notification->read_at,
                     'read_at' => $notification->read_at,
                     'created_at' => $createdAt,
                     'userName' => $userName
@@ -68,7 +72,7 @@ class NotificationController extends Controller
             }
 
             if (!$notification->read_at) {
-                $notification->read_at = now();
+                $notification->read_at = Carbon::now()->toDateTimeString();
                 $notification->save();
             }
 
@@ -76,7 +80,8 @@ class NotificationController extends Controller
                 'message' => 'Notification marked as read',
                 'notification' => [
                     'id' => $notification->id,
-                    'read_at' => $notification->read_at
+                    'read_at' => $notification->read_at,
+                    'data' => $notification->data
                 ]
             ]);
         } catch (\Exception $e) {
@@ -91,11 +96,25 @@ class NotificationController extends Controller
 
     public function markAllAsRead(Request $request)
     {
-        Notification::where('user_id', Auth::id())
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
+        try {
+            $notifications = Notification::where('user_id', Auth::id())
+                ->whereNull('read_at')
+                ->get();
 
-        return response()->json(['message' => 'All notifications marked as read']);
+            $now = Carbon::now()->toDateTimeString();
+            foreach ($notifications as $notification) {
+                $notification->read_at = $now;
+                $notification->save();
+            }
+
+            return response()->json(['message' => 'All notifications marked as read']);
+        } catch (\Exception $e) {
+            \Log::error('Error marking all notifications as read:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Failed to mark notifications as read'], 500);
+        }
     }
 
     public function getUnreadCount(Request $request)
