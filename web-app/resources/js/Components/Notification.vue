@@ -44,7 +44,7 @@
                   <p class="text-sm text-gray-500"> <span class="font-medium">{{ notification.data.item_name }} {{ notification.data.message }}</span></p>
                 </div>
               </div>
-              <span v-if="!notification.read_at" 
+              <span v-if="!notification.read_at"  
                 class="bg-red-500 w-2.5 h-2.5 rounded-full"
                 title="Unread notification"></span>
             </div>
