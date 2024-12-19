@@ -61,7 +61,7 @@ class AdminController extends Controller
 
     public function reportedItems()
     {
-        $lostItems = LostItem::with('user:id,name', 'claim:claim_id,claim_status')->get();
+        $lostItems = LostItem::with('user:id,name')->get();
         $foundItems = FoundItem::with('user:id,name', 'claim:claim_id,claim_status')->get();
 
         return response()->json([
