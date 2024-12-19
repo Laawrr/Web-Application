@@ -22,6 +22,7 @@ class CommentController extends Controller
             }
     
             Log::info('Comment request data:', $request->all());
+            Log::info('Authenticated user:', ['user_id' => auth()->id(), 'user' => auth()->user()]);
     
             // Validate the request
             $validatedData = $request->validate([
@@ -46,40 +47,66 @@ class CommentController extends Controller
     
             DB::beginTransaction();
             try {
-                // Create the comment
-                $comment = new Comment([
+                // Debug log before comment creation
+                Log::info('Attempting to create comment with data:', [
                     'user_id' => auth()->id(),
                     'text' => $request->text,
+                    'commentable_id' => $item->id,
+                    'commentable_type' => get_class($item)
                 ]);
 
-                // Associate with the polymorphic relationship
-                $comment->commentable_id = $item->id;
-                $comment->commentable_type = $modelClass;
+                // Create the comment
+                $comment = new Comment();
+                $comment->fill([
+                    'user_id' => auth()->id(),
+                    'text' => $request->text,
+                    'commentable_id' => $item->id,
+                    'commentable_type' => get_class($item)
+                ]);
+
+                // Debug log comment object before saving
+                Log::info('Comment object before save:', $comment->toArray());
+
                 $comment->save();
                 
                 // Load the user relationship for the response
                 $comment->load('user');
                 
-                Log::info('Comment created:', ['comment' => $comment->toArray()]);
+                Log::info('Comment created successfully:', ['comment' => $comment->toArray()]);
     
                 // Create notification for the item owner
                 if ($item->user_id !== auth()->id()) {
-                    $notificationData = [
-                        'item_id' => $item->id,
-                        'item_type' => $request->item_type,
-                        'comment_id' => $comment->id,
-                        'item_name' => $item->name ?? $item->item_name ?? 'Unknown Item',
-                        'commenter_name' => auth()->user()->name
-                    ];
+                    try {
+                        $notificationData = [
+                            'item_id' => $item->id,
+                            'item_type' => $request->item_type,
+                            'comment_id' => $comment->id,
+                            'item_name' => $item->name ?? $item->item_name ?? 'Unknown Item',
+                            'commenter_name' => auth()->user()->name
+                        ];
 
-                    Notification::create([
-                        'user_id' => $item->user_id,
-                        'title' => 'New Comment',
-                        'message' => auth()->user()->name . ' commented on your ' . $request->item_type . ' item.',
-                        'type' => 'comment',
-                        'read' => false,
-                        'data' => json_encode($notificationData)
-                    ]);
+                        Log::info('Creating notification with data:', [
+                            'notification_data' => $notificationData,
+                            'user_id' => $item->user_id
+                        ]);
+
+                        $notification = Notification::create([
+                            'user_id' => $item->user_id,
+                            'title' => auth()->user()->name . ' commented on your item',
+                            'message' => auth()->user()->name . ' commented on your ' . $request->item_type . ' item',
+                            'type' => 'comment',
+                            'read' => false,
+                            'data' => $notificationData
+                        ]);
+
+                        Log::info('Notification created successfully:', ['notification' => $notification->toArray()]);
+                    } catch (\Exception $e) {
+                        Log::error('Failed to create notification:', [
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString()
+                        ]);
+                        // Don't throw the error - we still want to return the comment
+                    }
                 }
     
                 DB::commit();
@@ -87,26 +114,24 @@ class CommentController extends Controller
                 return response()->json([
                     'message' => 'Comment added successfully',
                     'comment' => $comment
-                ], 201);
+                ]);
+    
             } catch (\Exception $e) {
                 DB::rollBack();
-                Log::error('Database transaction failed:', [
+                Log::error('Error creating comment:', [
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString()
                 ]);
-                throw $e;
+                return response()->json([
+                    'error' => 'Failed to add comment',
+                    'message' => $e->getMessage(),
+                    'details' => $e->getTraceAsString()
+                ], 500);
             }
-    
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::warning('Validation failed:', [
-                'errors' => $e->errors(),
-                'request' => $request->all()
-            ]);
-            throw $e;
         } catch (\Exception $e) {
-            Log::error('Error in CommentController@store: ' . $e->getMessage(), [
-                'exception' => $e,
-                'request' => $request->all()
+            Log::error('Error in comment submission:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
                 'error' => 'Failed to add comment',
