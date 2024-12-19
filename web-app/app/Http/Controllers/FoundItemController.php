@@ -86,45 +86,54 @@ class FoundItemController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $foundItem = FoundItem::findOrFail($id);
+        try {
+            $foundItem = FoundItem::findOrFail($id);
 
-        $imageUrl = $foundItem->image_url;
-        if ($request->hasFile('image_url')) {
-            $image = $request->file('image_url');
-            $filename = time() . '.' . $image->extension();
-            $image->move(public_path('assets/img'), $filename);
-            $imageUrl = asset('assets/img/' . $filename);
+            $request->validate([
+                'item_name' => 'required|string|max:255',
+                'category' => 'required|string',
+                'description' => 'nullable|string',
+                'facebook_link' => 'nullable|url',
+                'contact_number' => 'nullable|string|max:15',
+            ]);
 
-            // Delete the old image if it exists
-            if ($foundItem->image_url && file_exists(public_path($foundItem->image_url))) {
-                unlink(public_path($foundItem->image_url));
+            $data = $request->only([
+                'item_name',
+                'category',
+                'description',
+                'facebook_link',
+                'contact_number',
+            ]);
+
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $filename = time() . '.' . $image->extension();
+                $image->move(public_path('assets/img'), $filename);
+                $data['image_url'] = 'assets/img/' . $filename;
+
+                // Delete old image if it exists
+                if ($foundItem->image_url) {
+                    $oldImagePath = public_path($foundItem->image_url);
+                    if (file_exists($oldImagePath)) {
+                        unlink($oldImagePath);
+                    }
+                }
             }
+
+            $foundItem->update($data);
+            $foundItem->refresh(); // Refresh the model to get the updated data
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Found item updated successfully',
+                'post' => $foundItem
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update post: ' . $e->getMessage()
+            ], 500);
         }
-
-        $request->validate([
-            'found_date' => 'required|date',
-            'item_name' => 'required|string|max:255',
-            'facebook_link' => 'nullable|url',
-            'contact_number' => 'nullable|string|max:15',
-            'description' => 'nullable|string',
-            'category' => 'required|string',
-            'location' => 'required|string',
-            'user_id' => 'required|exists:users,id',
-        ]);
-
-        $foundItem->update([
-            'found_date' => $request->input('found_date'),
-            'item_name' => $request->input('item_name'),
-            'facebook_link' => $request->input('facebook_link'),
-            'contact_number' => $request->input('contact_number'),
-            'description' => $request->input('description'),
-            'category' => $request->input('category'),
-            'location' => $request->input('location'),
-            'user_id' => $request->input('user_id'),
-            'image_url' => $imageUrl,
-        ]);
-
-        return response()->json($foundItem);
     }
 
     /**
@@ -132,15 +141,28 @@ class FoundItemController extends Controller
      */
     public function destroy($id)
     {
-        $foundItem = FoundItem::findOrFail($id);
+        try {
+            $foundItem = FoundItem::findOrFail($id);
+            
+            // Delete the image file if it exists
+            if ($foundItem->image_url) {
+                $filePath = public_path($foundItem->image_url);
+                if (file_exists($filePath)) {
+                    unlink($filePath); 
+                }
+            }
         
-        $filePath = public_path($foundItem->image_url);
-        if (file_exists($filePath)) {
-            unlink($filePath); 
-        } 
-    
-        $foundItem->delete();
-    
-        return response()->json(null, 204);
+            $foundItem->delete();
+        
+            return response()->json([
+                'success' => true,
+                'message' => 'Item deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete item: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

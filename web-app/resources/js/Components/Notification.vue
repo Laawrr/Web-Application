@@ -40,8 +40,16 @@
                   {{ notification.userName?.[0]?.toUpperCase() || 'U' }}
                 </div>
                 <div>
-                  <p class="font-medium text-gray-900">{{ notification.userName }}</p>
-                  <p class="text-sm text-gray-500"> <span class="font-medium">{{ notification.data.item_name }} {{ notification.data.message }}</span></p>
+                  <p class="font-medium text-gray-900">{{ notification.data.commenter_name || notification.data.title }}</p>
+                  <p class="text-sm text-gray-500">
+                    <template v-if="notification.type === 'comment'">
+                      commented on your {{ notification.data.item_type }} item 
+                      <span class="font-medium">"{{ notification.data.item_name }}"</span>
+                    </template>
+                    <template v-else>
+                      {{ notification.data.message }}
+                    </template>
+                  </p>
                 </div>
               </div>
               <span v-if="!notification.read_at" 
