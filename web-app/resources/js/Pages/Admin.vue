@@ -13,7 +13,7 @@
       <v-btn icon>
         <v-icon>mdi-bell</v-icon>
       </v-btn>
-      <v-btn text color="secondary" class="logout-btn mt-3" @click="handleSignOut"  style="margin-right: 80px;">
+      <v-btn text color="secondary" class="logout-btn mt-3" @click="handleSignOut" style="margin-right: 80px;">
         Logout
       </v-btn>
     </v-app-bar>
@@ -70,14 +70,8 @@
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-semibold">Claims Management</h2>
             <div class="flex space-x-2">
-              <v-btn
-                v-for="filter in ['All', 'Pending', 'Approved', 'Rejected']"
-                :key="filter"
-                :color="currentFilter === filter.toLowerCase() ? 'primary' : ''"
-                @click="currentFilter = filter.toLowerCase()"
-                small
-                outlined
-              >
+              <v-btn v-for="filter in ['all', 'Pending', 'Approved', 'Rejected']" :key="filter"
+                :color="currentFilter === filter ? 'primary' : ''" @click="currentFilter = filter" small outlined>
                 {{ filter }}
               </v-btn>
             </div>
@@ -85,15 +79,8 @@
 
           <!-- Claims List -->
           <div class="grid gap-4">
-            <ClaimedItem
-              v-for="claim in filteredClaims"
-              :key="claim.id"
-              :item="claim.item"
-              :status="claim.status"
-              :proofImage="claim.proof_image"
-              :claimId="claim.id"
-              @status-updated="handleStatusUpdate"
-            />
+            <ClaimedItem v-for="claim in filteredClaims" :key="claim.id" :item="claim.item" :status="claim.claim_status"
+              :proofImage="claim.proof_image" :claimId="claim.id" @status-updated="handleStatusUpdate" />
           </div>
         </div>
       </v-container>
@@ -131,7 +118,7 @@ const claims = ref([
       created_at: '2023-12-19',
       image_url: '/img/sample-item.jpg'
     },
-    status: 'pending',
+    claim_status: 'Pending', // Correct claim status here
     proof_image: '/img/sample-proof.jpg'
   },
   // Add more sample claims as needed
@@ -141,14 +128,14 @@ const filteredClaims = computed(() => {
   if (currentFilter.value === 'all') {
     return claims.value;
   }
-  return claims.value.filter(claim => claim.status === currentFilter.value);
+  return claims.value.filter(claim => claim.claim_status === currentFilter.value);
 });
 
 // Handle claim status updates
 const handleStatusUpdate = ({ id, status }) => {
   const claimIndex = claims.value.findIndex(claim => claim.id === id);
   if (claimIndex !== -1) {
-    claims.value[claimIndex].status = status;
+    claims.value[claimIndex].claim_status = status;
   }
 };
 </script>

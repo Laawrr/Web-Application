@@ -27,8 +27,8 @@ class AdminController extends Controller
         $lostItems = LostItem::count();
         $foundItems = FoundItem::count();
         $usersWithClaimsCount = DB::table('users')
-            ->select('users.id', 'users.name', DB::raw('get_user_claims_count(users.id) as claim_count'))
-            ->get();
+        ->select('users.id', DB::raw('get_user_claims_count(users.id) as claim_count'))
+        ->get();
 
         // Extract total claims count from the query result
         $claims = $usersWithClaimsCount->sum('claim_count');

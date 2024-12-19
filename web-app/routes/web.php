@@ -57,7 +57,7 @@ Route::get('/', function () {
 // Dashboard Route
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware([CheckRole::class . ':user'])->name('dashboard');
 
 // Profile Routes
 Route::middleware('auth')->group(function () {
@@ -66,7 +66,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
     // Add the newsfeed route here
-    Route::get('/newsfeed', function () {
+Route::get('/newsfeed', function () {
         return Inertia::render('NewsFeed'); // 'NewsFeed' is the Vue component name
     })->middleware('auth'); // Add auth middleware if needed
 });

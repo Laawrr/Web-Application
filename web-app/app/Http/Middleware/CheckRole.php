@@ -11,14 +11,20 @@ class CheckRole
     {
         // Check if the user is authenticated
         if (auth()->guest()) {
-            // Redirect to the login page if the user is not authenticated
             return redirect()->route('login');
+        }
+
+        // If the user has the 'admin' role, block access to non-admin routes like dashboard or profile
+        if (auth()->user()->role === 'admin') {
+            // Check if the user is trying to access dashboard or profile and redirect accordingly
+            if ($request->is('dashboard') || $request->is('profile')) {
+                return redirect('/admin');  // Redirect to the admin dashboard
+            }
         }
 
         // Check if the authenticated user has the required role
         if (auth()->user()->role !== $role) {
-            // If the user does not have the required role, redirect to a different page
-            return redirect('/'); // Or to a specific page, like the dashboard
+            return redirect('/');  // Or to a specific page
         }
 
         return $next($request);
