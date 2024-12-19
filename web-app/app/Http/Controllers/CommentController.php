@@ -16,6 +16,7 @@ class CommentController extends Controller
     {
         try {
             if (!auth()->check()) {
+                Log::error('Unauthorized comment attempt - user not authenticated');
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
     
@@ -38,10 +39,15 @@ class CommentController extends Controller
     
             // Determine the model based on item_type
             $modelClass = $request->item_type === 'lost' ? LostItem::class : FoundItem::class;
+            Log::info('Using model class:', ['class' => $modelClass]);
     
             // Find the item
             $item = $modelClass::findOrFail($request->item_id);
-            Log::info('Found item:', ['item' => $item->toArray()]);
+            Log::info('Found item:', [
+                'item' => $item->toArray(),
+                'item_user_id' => $item->user_id,
+                'current_user_id' => auth()->id()
+            ]);
     
             DB::beginTransaction();
             try {
@@ -65,18 +71,27 @@ class CommentController extends Controller
                 // Create notification for the item owner
                 if ($item->user_id !== auth()->id()) {
                     try {
+                        Log::info('Attempting to create notification:', [
+                            'item_user_id' => $item->user_id,
+                            'current_user_id' => auth()->id(),
+                            'item_type' => $request->item_type,
+                            'item_name' => $item->item_name,
+                            'item_class' => get_class($item)
+                        ]);
+
                         $notificationData = [
                             'title' => auth()->user()->name . ' commented on your item',
                             'message' => auth()->user()->name . ' commented on your ' . $request->item_type . ' item',
                             'item_id' => $item->id,
                             'item_type' => $request->item_type,
                             'comment_id' => $comment->id,
-                            'item_name' => $item->item_name ?? 'Unknown Item',
+                            'item_name' => $item->item_name,
                             'commenter_name' => auth()->user()->name
                         ];
 
-                        Log::info('Creating notification:', [
+                        Log::info('Creating notification with data:', [
                             'user_id' => $item->user_id,
+                            'type' => 'comment',
                             'data' => $notificationData
                         ]);
 
@@ -86,14 +101,21 @@ class CommentController extends Controller
                             'data' => $notificationData
                         ]);
 
-                        Log::info('Notification created:', $notification->toArray());
+                        Log::info('Notification created successfully:', $notification->toArray());
                     } catch (\Exception $e) {
                         Log::error('Failed to create notification:', [
                             'error' => $e->getMessage(),
-                            'trace' => $e->getTraceAsString()
+                            'trace' => $e->getTraceAsString(),
+                            'item_user_id' => $item->user_id ?? 'unknown',
+                            'current_user_id' => auth()->id() ?? 'unknown',
+                            'item_type' => $request->item_type ?? 'unknown'
                         ]);
-                        // Don't throw the error - we still want to return the comment
                     }
+                } else {
+                    Log::info('Skipping notification - user commenting on own item', [
+                        'item_user_id' => $item->user_id,
+                        'current_user_id' => auth()->id()
+                    ]);
                 }
 
                 DB::commit();

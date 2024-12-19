@@ -4,8 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use App\Models\Notification;
 use App\Models\Comment;
+use App\Models\User;
 
 class FoundItem extends Model
 {
@@ -18,14 +21,11 @@ class FoundItem extends Model
         'description', 'category', 'location', 'image_url', 'user_id'
     ];
 
-    public function user()
+    protected $with = ['user'];
+
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function claim()
-    {
-        return $this->hasOne(Claim::class, 'item_id');
     }
 
     /**
@@ -33,18 +33,46 @@ class FoundItem extends Model
      *
      * @return \Illuminate\Database\Eloquent\Relations\MorphMany
      */
-    public function comments()
+    public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable');
     }
 
     public function notifyUser()
     {
-        // Create a new notification
-        Notification::create([
-            'type' => 'found_item_reported',
-            'data' => ['item_name' => $this->item_name],
-            'user_id' => $this->user_id,
-        ]);
+        if ($this->user_id) {
+            $notificationData = [
+                'title' => 'New Found Item Posted',
+                'message' => 'A new found item has been posted: ' . $this->item_name,
+                'item_id' => $this->id,
+                'item_type' => 'found',
+                'item_name' => $this->item_name
+            ];
+
+            \Log::info('Creating found item notification:', [
+                'user_id' => $this->user_id,
+                'item_name' => $this->item_name,
+                'data' => $notificationData
+            ]);
+
+            Notification::create([
+                'user_id' => $this->user_id,
+                'type' => 'found_item',
+                'data' => $notificationData
+            ]);
+        }
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::retrieved(function ($item) {
+            \Log::info('Retrieved found item:', [
+                'id' => $item->id,
+                'user_id' => $item->user_id,
+                'item_name' => $item->item_name
+            ]);
+        });
     }
 }

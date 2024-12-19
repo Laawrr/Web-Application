@@ -50,6 +50,7 @@
        <!-- Edit Modal -->
        <div v-if="showEditModal" class="edit-modal__overlay" @click="closeEditModal">
   <div class="edit-modal__content" @click.stop>
+    <button type="button" @click="closeEditModal" class="edit-modal__close-btn">&times;</button>
     <h2 class="edit-modal__title">Edit Item</h2>
 
     <form @submit.prevent="submitEditForm">
@@ -100,10 +101,11 @@
         <img :src="imagePreviewUrl" alt="Image Preview" class="image-preview" />
       </div>
 
-      <div class="form-actions">
-        <button type="submit" class="submit-btn">Save Changes</button>
-        <button type="button" @click="closeEditModal" class="cancel-btn">Cancel</button>
-      </div>
+     <!-- Submit and Delete Buttons -->
+        <div class="edit-modal__buttons">
+          <button type="submit" class="edit-modal__submit-btn">Save Changes</button>
+          <button type="button" class="edit-modal__delete-btn" @click="deleteCurrentItem">Delete Item</button>
+        </div>
     </form>
   </div>
 </div>
@@ -263,6 +265,8 @@ export default {
       showPostModal: false,
       showEditModal: false,
       currentPost: {},
+      selectedFile: null, // Add this line for handling image upload in edit mode
+      imagePreviewUrl: null,
     };
   },
   created() {
@@ -445,7 +449,7 @@ export default {
     console.log("Form submitted successfully:", response);
     // Show success message and refresh the posts
     this.showSuccess("Post created successfully!");
-    this.closeUploadForm();
+    this.closeAllModals();
     await this.fetchPosts();
   } catch (error) {
     console.error("Error occurred during form submission:", error);
@@ -473,15 +477,37 @@ export default {
     showSuccess(message) {
       alert(message);
     },
-    closeUploadForm() {
+    closeAllModals() {
+      // Close all modals
+      this.showPostModal = false;
+      this.showEditModal = false;
       this.showUploadForm = false;
-      this.resetNewItem();
-      this.locationSelected = false;
+      this.enlargedImage = null;
+
+      // Reset all states
+      this.selectedFile = null;
+      this.imagePreviewUrl = null;
+      this.currentPost = null;
       this.mapEnabled = false;
+      this.locationSelected = false;
+
+      // Reset the new item form
+      this.resetNewItem();
     },
-    enlargeImage(imageUrl) {
-      this.enlargedImage = imageUrl;
+    closePostModal() {
+      this.closeAllModals();
     },
+
+    closeEditModal() {
+      this.showEditModal = false;
+      this.selectedFile = null;
+      this.imagePreviewUrl = null;
+    },
+
+    closeUploadForm() {
+      this.closeAllModals();
+    },
+
     closeImage() {
       this.enlargedImage = null;
     },
@@ -521,22 +547,85 @@ export default {
       this.currentPost = post;
       this.showPostModal = true;
     },
-    closePostModal() {
-      this.showPostModal = false;
-      this.currentPost = {};
-    },
     openEditModal() {
       this.showEditModal = true;
     },
-    closeEditModal() {
-      this.showEditModal = false;
+    handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        this.selectedFile = file;
+        this.imagePreviewUrl = URL.createObjectURL(file);
+      }
     },
-    submitEditForm() {
-      // Handle the form submission logic for editing a post
-      this.showEditModal = false;
-      this.showSuccess("Post updated successfully!");
-    },
+    async submitEditForm() {
+      try {
+        const formData = new FormData();
+        formData.append('item_name', this.currentPost.item_name);
+        formData.append('category', this.currentPost.category);
+        formData.append('description', this.currentPost.description);
+        formData.append('facebook_link', this.currentPost.facebook_link);
+        formData.append('contact_number', this.currentPost.contact_number);
+        formData.append('_method', 'PUT');
 
+        if (this.selectedFile) {
+          formData.append('image', this.selectedFile);
+        }
+
+        const endpoint = this.currentPost.isFound ? 'found-items' : 'lost-items';
+        const response = await axios.post(`/api/${endpoint}/${this.currentPost.id}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          }
+        });
+
+        if (response.data.success) {
+          // Update the posts array with the updated post
+          const index = this.posts.findIndex(post => post.id === this.currentPost.id);
+          if (index !== -1) {
+            this.posts[index] = response.data.post;
+            this.filterPosts(); // Refresh the filtered posts
+          }
+
+          this.closeAllModals();
+          this.showSuccess("Post updated successfully!");
+        } else {
+          this.showError("Failed to update post. Please try again.");
+        }
+      } catch (error) {
+        console.error('Error updating post:', error);
+        this.showError(error.response?.data?.message || "An error occurred while updating the post.");
+      }
+    },
+    async deleteCurrentItem() {
+      if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        const endpoint = this.currentPost.isFound ? 'found-items' : 'lost-items';
+        const response = await axios.delete(`/api/${endpoint}/${this.currentPost.id}`, {
+          headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          }
+        });
+
+        if (response.data.success) {
+          // Remove the post from the posts array
+          this.posts = this.posts.filter(post => post.id !== this.currentPost.id);
+          this.filterPosts(); // Refresh the filtered posts
+
+          // Close both modals since the item no longer exists
+          this.closeAllModals();
+          this.showSuccess("Item deleted successfully!");
+        } else {
+          this.showError("Failed to delete item. Please try again.");
+        }
+      } catch (error) {
+        console.error('Error deleting item:', error);
+        this.showError(error.response?.data?.message || "An error occurred while deleting the item.");
+      }
+    },
     // Display success message (you can customize this)
     showSuccess(message) {
       alert(message); // Simple alert for now, or use a custom notification system
@@ -625,6 +714,43 @@ export default {
   max-height: 200px;
   object-fit: cover;
   /* Ensures the image stays within bounds */
+}
+
+.edit-modal__buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.edit-modal__submit-btn,
+.edit-modal__delete-btn {
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+}
+
+.edit-modal__submit-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+}
+
+.edit-modal__submit-btn:hover {
+  background-color: #45a049;
+}
+
+.edit-modal__delete-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+}
+
+.edit-modal__delete-btn:hover {
+  background-color: #da190b;
 }
 
 /* Edit Modal Styles */
@@ -724,49 +850,25 @@ export default {
 
 .edit-modal__close-btn {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: #ff4b5c;
-  color: white;
+  top: 10px;
+  right: 10px;
+  background: none;
   border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  font-size: 1.5rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  font-size: 24px;
   cursor: pointer;
+  color: #666;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
   transition: all 0.3s ease;
 }
 
 .edit-modal__close-btn:hover {
-  background: #ff2c3c;
-}
-
-.edit-modal__close-btn:active {
-  transform: scale(0.95);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateY(-20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #333;
 }
 
 /* ======== Close Button ======== */
@@ -777,27 +879,27 @@ export default {
   background: #ff6f61; /* A softer shade of red */
   color: #fff;
   border: none;
-  border-radius: 8px; /* Rounded corners for a modern look */
-  padding: 10px 20px; /* Adjusted padding for a rectangular shape */
-  font-size: 1rem; /* Adjusted font size */
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 1rem;
   font-weight: bold;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .post-modal__close-btn:hover {
-  background: #ff4b5c; /* Darker red on hover */
-  transform: translateY(-2px); /* Slight upward movement on hover */
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
+  background: #ff4b5c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
 .post-modal__close-btn:focus {
-  outline: none; /* Removes the default focus outline */
-  border: 2px solid #ff4b5c; /* Adds a subtle border on focus */
+  outline: none;
+  border: 2px solid #ff4b5c;
 }
 
 
@@ -838,37 +940,28 @@ export default {
 .search-bar {
   display: flex;
   justify-content: center;
-  /* Centers the search bar horizontally */
   margin-bottom: 30px;
-  /* Adds spacing between the search bar and other content */
 }
 
 .search-bar input {
   width: 100%;
   max-width: 500px;
-  /* Increase width for a larger search bar */
   padding: 12px 20px;
-  /* More padding for a larger input field */
   border: 2px solid #ddd;
   border-radius: 30px;
-  /* Rounded corners for a more modern look */
   font-size: 1rem;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .search-bar input:focus {
   border-color: #008080;
-  /* Green border when focused */
   box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
-  /* Light green shadow on focus */
 }
 
 .search-bar input::placeholder {
   color: #888;
-  /* Lighter color for the placeholder */
   font-style: italic;
   font-size: 1rem;
-  /* Adjust placeholder text size */
 }
 
 /* Add styles for the button (if applicable) */
@@ -880,7 +973,15 @@ export default {
   border: none;
   border-radius: 30px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  text-align: center;
+  border: none;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  display: inline-block;
+  margin-top: 20px;
+  cursor: pointer;
 }
 
 .search-bar button:hover {
@@ -894,7 +995,7 @@ export default {
 /* === Featured Posts Section === */
 .featured-posts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* Flexible layout */
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 25px;
   padding: 20px 10px;
   margin-bottom: 50px;
@@ -902,108 +1003,111 @@ export default {
 
 /* === Card Styles === */
 .card {
-  background: linear-gradient(135deg, #f8f8f8, #e0e0e0); /* Subtle gradient background */
-  border-radius: 20px; /* Rounded corners for smoothness */
+  background: linear-gradient(135deg, #f8f8f8, #e0e0e0);
+  border-radius: 20px;
   padding: 30px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05); /* Elegant deep shadow */
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
   position: relative;
-  color: #333; /* Dark gray text for readability */
+  color: #333;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.3s ease-in-out; /* Smooth transition for hover effects */
+  transition: all 0.3s ease-in-out;
   color:#008080;
 }
 
 /* === Hover Effect - Card Elevation === */
 .card:hover {
-  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1); /* Deeper shadow */
-  transform: translateY(-12px); /* Lift effect */
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1);
+  transform: translateY(-12px);
   transition: all 0.4s ease-in-out;
 }
 
 /* === Card Image Styling === */
 .card-image {
   width: 100%;
-  height: 250px; /* Larger image height */
+  height: 250px;
   object-fit: cover;
-  border-radius: 15px; /* Rounded corners for images */
+  border-radius: 15px;
   margin-bottom: 20px;
   transition: transform 0.3s ease-in-out;
 }
 
 /* === Hover Effect on Image */
 .card-image:hover {
-  transform: scale(1.1); /* Smooth zoom-in effect */
+  transform: scale(1.1);
 }
 
 /* === Card Title Styling === */
 .card-title {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #2c3e50; /* Dark gray title */
+  color: #2c3e50;
   margin-bottom: 15px;
-  letter-spacing: 0.5px;
-  text-transform: capitalize;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 /* === Card Description Styling === */
 .card-text {
   font-size: 1rem;
-  color: #555; /* Lighter text color for description */
+  color: #555;
   line-height: 1.6;
   margin-bottom: 25px;
-  transition: color 0.3s ease; /* Smooth color transition */
+  transition: color 0.3s ease;
 }
 
 /* === Card Hover Effect on Description === */
 .card:hover .card-text {
-  color: #2c3e50; /* Darker color on hover */
+  color: #2c3e50;
 }
 
 /* === Call to Action Button Styling === */
 .card-button {
-  background-color: #3498db; /* Blue button color */
-  color: #fff; /* White text */
+  background-color: #3498db;
+  color: white;
+  border: none;
   padding: 12px 25px;
-  border-radius: 25px; /* Rounded button */
+  border-radius: 25px;
   font-weight: bold;
   font-size: 1.1rem;
   text-transform: uppercase;
   text-align: center;
   border: none;
-  transition: background-color 0.3s ease, transform 0.3s ease; /* Smooth button transition */
+  transition: background-color 0.3s ease, transform 0.3s ease;
   display: inline-block;
   margin-top: 20px;
   cursor: pointer;
 }
 
 .card-button:hover {
-  background-color: #2980b9; /* Darker blue button on hover */
-  transform: scale(1.05); /* Slight scaling effect */
+  background-color: #2980b9;
+}
+
+.card-button:active {
+  transform: scale(0.95);
 }
 
 /* === Hover Effect - Card Button Glow === */
 .card-button::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(52, 152, 219, 0.1); /* Subtle blue glow effect */
+  background: rgba(52, 152, 219, 0.1);
   z-index: -1;
   border-radius: 25px;
   transition: all 0.3s ease-in-out;
 }
 
 .card-button:hover::before {
-  opacity: 1; /* Show the glow effect on hover */
+  opacity: 1;
 }
 
-/* === Card Hover Effects - Animation === */
-.card:hover .card-image {
-  transform: scale(1.1);
-  transition: all 0.3s ease-in-out;
+.card-button:focus {
+  outline: none;
+  border: 2px solid #3498db;
 }
 
 /* === Card Bottom Shadow for Depth === */
@@ -1014,7 +1118,7 @@ export default {
   left: 0;
   right: 0;
   height: 10px;
-  background: rgba(0, 0, 0, 0.1); /* Soft shadow at the bottom for depth */
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 0 0 20px 20px;
 }
 
@@ -1097,9 +1201,7 @@ export default {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  /* This makes the radio button round */
   border: 2px solid #4CAF50;
-  /* Green border */
   background-color: white;
   margin-right: 5px;
   cursor: pointer;
@@ -1108,9 +1210,7 @@ export default {
 
 .radio-group input[type="radio"]:checked {
   background-color: #4CAF50;
-  /* Green background when checked */
   border-color: #4CAF50;
-  /* Green border when checked */
 }
 
 .radio-group input[type="radio"]:checked::before {
@@ -1121,7 +1221,6 @@ export default {
   width: 8px;
   height: 8px;
   background-color: white;
-  /* Inner white circle */
   border-radius: 50%;
 }
 
@@ -1325,7 +1424,6 @@ export default {
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.7);
-  /* Dark overlay */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1355,59 +1453,55 @@ export default {
 /* Edit Modal Close Button */
 .edit-modal__close-btn {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: #ff4b5c;
-  color: #fff;
+  top: 10px;
+  right: 10px;
+  background: none;
   border: none;
-  border-radius: 50%;
-  width: 50px;
-  height: 40px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  font-size: 24px;
   cursor: pointer;
+  color: #666;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
   transition: all 0.3s ease;
 }
 
 .edit-modal__close-btn:hover {
-  background: #ff2c3c;
-}
-
-.edit-modal__close-btn:active {
-  transform: scale(0.95);
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #333;
 }
 
 /* ======== Edit Button in the Item Modal ======== */
 .post-modal__edit-btn {
   position: absolute;
-  bottom: 20px; /* Positioned at the bottom */
-  left: 50%; /* Center the button horizontally */
-  transform: translateX(-50%); /* Ensure exact horizontal centering */
-  background: #008080; /* Teal color */
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #008080;
   color: #fff;
   border: none;
-  border-radius: 8px; /* Rounded corners for a modern look */
-  padding: 12px 30px; /* Padding for a rectangular shape */
-  font-size: 1rem; /* Adjust font size for clarity */
+  border-radius: 8px;
+  padding: 12px 30px;
+  font-size: 1rem;
   font-weight: bold;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .post-modal__edit-btn:hover {
-  background: #45a049; /* Slightly darker green on hover */
-  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
+  background: #45a049;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
 }
 
 .post-modal__edit-btn:active {
-  transform: scale(0.95); /* Slight shrinking effect when clicked */
+  transform: scale(0.95);
 }
 
 /* Styling for input fields and form */

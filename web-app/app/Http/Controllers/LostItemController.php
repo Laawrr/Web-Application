@@ -87,37 +87,54 @@ class LostItemController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $lostItem = LostItem::findOrFail($id);
+        try {
+            $lostItem = LostItem::findOrFail($id);
 
-        $request->validate([
-            'item_name' => 'required|string|max:255',
-            'category' => 'required|string',
-            'description' => 'nullable|string',
-            'facebook_link' => 'nullable|url',
-            'contact_number' => 'nullable|string|max:15',
-        ]);
+            $request->validate([
+                'item_name' => 'required|string|max:255',
+                'category' => 'required|string',
+                'description' => 'nullable|string',
+                'facebook_link' => 'nullable|url',
+                'contact_number' => 'nullable|string|max:15',
+            ]);
 
-        $data = $request->only([
-            'item_name',
-            'category',
-            'description',
-            'facebook_link',
-            'contact_number',
-        ]);
+            $data = $request->only([
+                'item_name',
+                'category',
+                'description',
+                'facebook_link',
+                'contact_number',
+            ]);
 
-        if ($request->hasFile('image_url')) {
-            $image = $request->file('image_url');
-            $filename = time() . '.' . $image->extension();
-            $image->move(public_path('assets/img'), $filename);
-            $data['image_url'] = 'assets/img/' . $filename;
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $filename = time() . '.' . $image->extension();
+                $image->move(public_path('assets/img'), $filename);
+                $data['image_url'] = 'assets/img/' . $filename;
+
+                // Delete old image if it exists
+                if ($lostItem->image_url) {
+                    $oldImagePath = public_path($lostItem->image_url);
+                    if (file_exists($oldImagePath)) {
+                        unlink($oldImagePath);
+                    }
+                }
+            }
+
+            $lostItem->update($data);
+            $lostItem->refresh(); // Refresh the model to get the updated data
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Lost item updated successfully',
+                'post' => $lostItem
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update post: ' . $e->getMessage()
+            ], 500);
         }
-
-        $lostItem->update($data);
-
-        return response()->json([
-            'message' => 'Lost item updated successfully',
-            'data' => $lostItem
-        ]);
     }
 
     /**
@@ -125,16 +142,29 @@ class LostItemController extends Controller
      */
     public function destroy($id)
     {
-        $lostItem = LostItem::findOrFail($id);
+        try {
+            $lostItem = LostItem::findOrFail($id);
+            
+            // Delete the image file if it exists
+            if ($lostItem->image_url) {
+                $filePath = public_path($lostItem->image_url);
+                if (file_exists($filePath)) {
+                    unlink($filePath); 
+                }
+            }
         
-        $filePath = public_path($lostItem->image_url);
-        if (file_exists($filePath)) {
-            unlink($filePath); 
-        } 
-    
-        $lostItem->delete();
-    
-        return response()->json(null, 204);
+            $lostItem->delete();
+        
+            return response()->json([
+                'success' => true,
+                'message' => 'Item deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete item: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getLostItemsByUser($id)

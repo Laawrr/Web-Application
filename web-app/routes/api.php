@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\LostItemController;
+use App\Http\Controllers\FoundItemController;
 
 // User routes
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
@@ -17,6 +19,24 @@ Route::prefix('posts')->group(function () {
     Route::post('/', [PostController::class, 'store']);
     Route::put('/{id}', [PostController::class, 'update']);
     Route::delete('/{id}', [PostController::class, 'destroy']);
+});
+
+// Lost Items routes
+Route::prefix('lost-items')->group(function () {
+    Route::get('/', [LostItemController::class, 'index']);
+    Route::post('/', [LostItemController::class, 'store']);
+    Route::get('/{id}', [LostItemController::class, 'show']);
+    Route::put('/{id}', [LostItemController::class, 'update']);
+    Route::delete('/{id}', [LostItemController::class, 'destroy']);
+});
+
+// Found Items routes
+Route::prefix('found-items')->group(function () {
+    Route::get('/', [FoundItemController::class, 'index']);
+    Route::post('/', [FoundItemController::class, 'store']);
+    Route::get('/{id}', [FoundItemController::class, 'show']);
+    Route::put('/{id}', [FoundItemController::class, 'update']);
+    Route::delete('/{id}', [FoundItemController::class, 'destroy']);
 });
 
 // Comments routes

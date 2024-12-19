@@ -52,6 +52,9 @@ onUnmounted(() => {
                             <NavLink href="/" :active="$page.url === '/'">
                                 Homepage
                             </NavLink>
+                            <NavLink href="/newsfeed" :active="$page.url === '/'">
+                                Feed
+                            </NavLink>
                             <NavLink href="/dashboard" :active="$page.url === '/dashboard'">
                                 Dashboard
                             </NavLink>
