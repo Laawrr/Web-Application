@@ -2,19 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Comment extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'user_id',
         'text',
         'commentable_id',
         'commentable_type',
-        'item_type'
+        'created_at',
+        'updated_at'
     ];
 
     protected $with = ['user'];
