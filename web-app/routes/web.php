@@ -91,6 +91,7 @@ Route::prefix('lost-items')->group(function () {
     Route::post('/', [lostItemController::class, 'store'])->name('lost-items.store'); // Store a new lost item
     Route::put('{id}', [lostItemController::class, 'update'])->name('lost-items.update'); // Update an existing lost item
     Route::delete('{id}', [lostItemController::class, 'destroy'])->name('lost-items.destroy'); // Delete a lost item
+    Route::get('/user/{userId}', [LostItemController::class, 'getLostItemsByUser']);
 });
 
 
