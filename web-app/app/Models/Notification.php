@@ -17,7 +17,10 @@ class Notification extends Model
         'type',
         'data',
         'read_at',
-        'user_id'
+        'user_id',
+        'title',
+        'message',
+        'read'
     ];
 
     // The attributes that should be cast to native types
