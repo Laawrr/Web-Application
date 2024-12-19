@@ -207,56 +207,39 @@ export default {
         
         for (let item of lostItems.value) {
           try {
+            // Determine item type based on isFound property
             const itemType = item.isFound ? 'found' : 'lost';
+            console.log(`Fetching comments for ${itemType} item ${item.id}`);
+            
             const response = await axios.get(`/comments/${itemType}/${item.id}`);
-            console.log(`Comments for item ${item.id}:`, response.data);
+            console.log(`Comments response for item ${item.id}:`, response.data);
 
-            // Handle different response formats and ensure we have an array
-            let commentsArray = [];
-            if (response.data?.comments?.data) {
-              commentsArray = response.data.comments.data;
-            } else if (response.data?.comments) {
-              commentsArray = Array.isArray(response.data.comments)
-                ? response.data.comments
-                : Object.values(response.data.comments);
-            } else if (Array.isArray(response.data)) {
-              commentsArray = response.data;
-            } else if (typeof response.data === 'object') {
-              commentsArray = Object.values(response.data);
+            // Initialize comments array if needed
+            if (!item.comments) {
+              item.comments = [];
             }
 
-            // Ensure commentsArray is actually an array and filter out null values
-            commentsArray = Array.isArray(commentsArray) 
-              ? commentsArray.filter(comment => comment !== null)
-              : [];
-            
-            // Ensure each comment has a userName and required fields
-            item.comments = commentsArray.map(comment => {
-              // Ensure we have the comment user data
-              const userName = comment.user?.name || comment.userName || 'Unknown User';
-              
-              return {
+            // Update comments if we got a valid response
+            if (response.data.success && Array.isArray(response.data.comments)) {
+              item.comments = response.data.comments.map(comment => ({
                 ...comment,
-                userName,
-                text: comment.text || '',
-                id: comment.id || null,
-                created_at: comment.created_at || new Date().toISOString(),
-                user: {
-                  ...comment.user,
-                  name: userName
-                }
-              };
-            });
+                userName: comment.user.name
+              }));
+            }
 
             // Sort comments by date, newest first
             item.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            console.log(`Updated comments for item ${item.id}:`, item.comments);
           } catch (error) {
-            console.error(`Error fetching comments for item ${item.id}:`, error.message);
-            item.comments = [];
+            console.error(`Error fetching comments for item ${item.id}:`, error);
+            if (!item.comments) {
+              item.comments = [];
+            }
           }
         }
       } catch (error) {
-        console.error("Error in fetchComments:", error.message);
+        console.error('Error in fetchComments:', error);
       }
     };
 
@@ -290,7 +273,7 @@ export default {
           if (response.data.comment) {
             const newComment = {
               ...response.data.comment,
-              userName: userName.value // Add the current user's name to the comment
+              userName: response.data.comment.user.name // Use the name from the response
             };
             item.comments.unshift(newComment);
             

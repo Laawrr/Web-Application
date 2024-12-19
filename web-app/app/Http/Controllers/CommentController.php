@@ -15,9 +15,7 @@ class CommentController extends Controller
     public function store(Request $request)
     {
         try {
-            // Ensure the user is authenticated
             if (!auth()->check()) {
-                Log::warning('Unauthorized comment attempt');
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
     
@@ -47,59 +45,48 @@ class CommentController extends Controller
     
             DB::beginTransaction();
             try {
-                // Debug log before comment creation
-                Log::info('Attempting to create comment with data:', [
-                    'user_id' => auth()->id(),
-                    'text' => $request->text,
-                    'commentable_id' => $item->id,
-                    'commentable_type' => get_class($item)
-                ]);
-
                 // Create the comment
                 $comment = new Comment();
-                $comment->fill([
-                    'user_id' => auth()->id(),
-                    'text' => $request->text,
-                    'commentable_id' => $item->id,
-                    'commentable_type' => get_class($item)
-                ]);
-
-                // Debug log comment object before saving
+                $comment->user_id = auth()->id();
+                $comment->text = $request->text;
+                $comment->commentable_id = $item->id;
+                $comment->commentable_type = get_class($item);
+                $comment->item_type = $request->item_type;
+                
                 Log::info('Comment object before save:', $comment->toArray());
-
+                
                 $comment->save();
                 
                 // Load the user relationship for the response
                 $comment->load('user');
                 
                 Log::info('Comment created successfully:', ['comment' => $comment->toArray()]);
-    
+
                 // Create notification for the item owner
                 if ($item->user_id !== auth()->id()) {
                     try {
                         $notificationData = [
+                            'title' => auth()->user()->name . ' commented on your item',
+                            'message' => auth()->user()->name . ' commented on your ' . $request->item_type . ' item',
                             'item_id' => $item->id,
                             'item_type' => $request->item_type,
                             'comment_id' => $comment->id,
-                            'item_name' => $item->name ?? $item->item_name ?? 'Unknown Item',
+                            'item_name' => $item->item_name ?? 'Unknown Item',
                             'commenter_name' => auth()->user()->name
                         ];
 
-                        Log::info('Creating notification with data:', [
-                            'notification_data' => $notificationData,
-                            'user_id' => $item->user_id
+                        Log::info('Creating notification:', [
+                            'user_id' => $item->user_id,
+                            'data' => $notificationData
                         ]);
 
                         $notification = Notification::create([
                             'user_id' => $item->user_id,
-                            'title' => auth()->user()->name . ' commented on your item',
-                            'message' => auth()->user()->name . ' commented on your ' . $request->item_type . ' item',
                             'type' => 'comment',
-                            'read' => false,
                             'data' => $notificationData
                         ]);
 
-                        Log::info('Notification created successfully:', ['notification' => $notification->toArray()]);
+                        Log::info('Notification created:', $notification->toArray());
                     } catch (\Exception $e) {
                         Log::error('Failed to create notification:', [
                             'error' => $e->getMessage(),
@@ -108,12 +95,24 @@ class CommentController extends Controller
                         // Don't throw the error - we still want to return the comment
                     }
                 }
-    
+
                 DB::commit();
     
                 return response()->json([
-                    'message' => 'Comment added successfully',
-                    'comment' => $comment
+                    'success' => true,
+                    'comment' => [
+                        'id' => $comment->id,
+                        'text' => $comment->text,
+                        'user' => [
+                            'id' => $comment->user->id,
+                            'name' => $comment->user->name
+                        ],
+                        'created_at' => $comment->created_at,
+                        'updated_at' => $comment->updated_at,
+                        'commentable_id' => $comment->commentable_id,
+                        'commentable_type' => $comment->commentable_type,
+                        'item_type' => $request->item_type
+                    ]
                 ]);
     
             } catch (\Exception $e) {
@@ -124,8 +123,7 @@ class CommentController extends Controller
                 ]);
                 return response()->json([
                     'error' => 'Failed to add comment',
-                    'message' => $e->getMessage(),
-                    'details' => $e->getTraceAsString()
+                    'message' => $e->getMessage()
                 ], 500);
             }
         } catch (\Exception $e) {
@@ -135,8 +133,7 @@ class CommentController extends Controller
             ]);
             return response()->json([
                 'error' => 'Failed to add comment',
-                'message' => $e->getMessage(),
-                'details' => $e->getTraceAsString()
+                'message' => $e->getMessage()
             ], 500);
         }
     }
@@ -193,44 +190,56 @@ class CommentController extends Controller
     public function index($item_type, $item_id)
     {
         try {
-            Log::info('Fetching comments', [
+            Log::info('Fetching comments for item:', [
                 'item_type' => $item_type,
                 'item_id' => $item_id
             ]);
 
             // Determine the model based on item_type
-            $model = $item_type === 'lost' ? LostItem::class : FoundItem::class;
+            $modelClass = $item_type === 'lost' ? LostItem::class : FoundItem::class;
 
             // Find the item
-            $item = $model::findOrFail($item_id);
+            $item = $modelClass::findOrFail($item_id);
+            
+            Log::info('Found item:', [
+                'id' => $item->id,
+                'type' => $item_type,
+                'model' => get_class($item)
+            ]);
 
-            // Fetch comments with pagination and eager load user relationship
-            $comments = $item->comments()
+            // Get comments specifically for this item and type
+            $comments = Comment::where('commentable_id', $item->id)
+                ->where('commentable_type', get_class($item))
                 ->with('user:id,name')
                 ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($comment) {
-                    return [
-                        'id' => $comment->id,
-                        'text' => $comment->text,
-                        'user' => [
-                            'id' => $comment->user->id,
-                            'name' => $comment->user->name
-                        ],
-                        'created_at' => $comment->created_at,
-                        'updated_at' => $comment->updated_at
-                    ];
-                });
+                ->get();
 
-            Log::info('Comments fetched successfully', [
+            Log::info('Comments fetched:', [
                 'count' => $comments->count(),
-                'first_comment' => $comments->first()
+                'comments' => $comments->toArray()
             ]);
+
+            $formattedComments = $comments->map(function($comment) {
+                return [
+                    'id' => $comment->id,
+                    'text' => $comment->text,
+                    'user' => [
+                        'id' => $comment->user->id,
+                        'name' => $comment->user->name
+                    ],
+                    'created_at' => $comment->created_at,
+                    'updated_at' => $comment->updated_at,
+                    'commentable_id' => $comment->commentable_id,
+                    'commentable_type' => $comment->commentable_type,
+                    'item_type' => $comment->item_type
+                ];
+            });
 
             return response()->json([
                 'success' => true,
-                'comments' => $comments
+                'comments' => $formattedComments
             ]);
+
         } catch (\Exception $e) {
             Log::error('Error in fetching comments for item', [
                 'exception' => $e->getMessage(),
