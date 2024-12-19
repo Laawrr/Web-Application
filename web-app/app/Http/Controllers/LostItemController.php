@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LostItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LostItemController extends Controller
 {
@@ -134,5 +135,13 @@ class LostItemController extends Controller
         $lostItem->delete();
     
         return response()->json(null, 204);
+    }
+
+    public function getLostItemsByUser($id)
+    {
+        // Call the PostgreSQL function using raw SQL
+        $lostItems = DB::select('SELECT * FROM get_lost_items_by_user(?)', [$id]);
+
+        return response()->json($lostItems);
     }
 }
