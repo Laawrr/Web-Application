@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class ClaimController extends Controller
@@ -56,29 +57,37 @@ class ClaimController extends Controller
     /**
      * Update the claim's status.
      */
+
+
     public function update(Request $request, $id)
     {
         try {
-            $claim = Claim::findOrFail($id);
+            DB::beginTransaction();
     
+            $claim = Claim::findOrFail($id);
+     
             // Validate the claim status
             $validated = $request->validate([
                 'claim_status' => 'required|in:Pending,Approved,Rejected',
             ]);
-    
+     
             // Log the validated claim status
             \Log::info("Claim status being updated for claim ID: $id", ['new_status' => $validated['claim_status']]);
-    
+     
             // Update the claim status
             $claim->update([
                 'claim_status' => $validated['claim_status'],
             ]);
     
+            DB::commit();
+    
             return response()->json(['success' => true, 'claim' => $claim], 200);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
             \Log::error("Claim not found for ID: $id");
             return response()->json(['success' => false, 'message' => 'Claim not found'], 404);
         } catch (\Exception $e) {
+            DB::rollBack();
             \Log::error('Error updating claim status', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Failed to update claim status'], 500);
         }

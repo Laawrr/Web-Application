@@ -41,7 +41,7 @@
                 </div>
                 <div>
                   <p class="font-medium text-gray-900">{{ notification.userName }}</p>
-                  <p class="text-sm text-gray-500">commented on <span class="font-medium">{{ notification.data.item_name }}</span></p>
+                  <p class="text-sm text-gray-500"> <span class="font-medium">{{ notification.data.item_name }} {{ notification.data.message }}</span></p>
                 </div>
               </div>
               <span v-if="!notification.read_at" 
